@@ -43,8 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initSupabaseClient() {
-  const supabaseUrl = window.SUPABASE_URL || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_URL : null);
-  const supabaseKey = window.SUPABASE_ANON_KEY || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_ANON_KEY : null);
+  const supabaseUrl = window.SUPABASE_URL || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_URL : null) || "https://gndnmbdzfoamtgjkvnyr.supabase.co";
+  const supabaseKey = window.SUPABASE_ANON_KEY || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_ANON_KEY : null) || "sb_publishable_zojIDwrTmNXHQLWuOhm7yQ_2pIvgypM";
 
   const dot = document.getElementById("supabase-status-dot");
   const label = document.getElementById("supabase-status-label");
