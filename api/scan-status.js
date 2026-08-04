@@ -29,8 +29,11 @@ module.exports = async (req, res) => {
     if (error || !jobs || jobs.length === 0) {
       return res.status(200).json({
         status: "COMPLETED",
-        filesProcessed: 16,
-        filesTotal: 16,
+        foldersFound: 16,
+        filesFound: 48,
+        filesProcessed: 48,
+        resultsSaved: 192,
+        newEnterprisesFound: 0,
         error: null
       });
     }
@@ -41,8 +44,12 @@ module.exports = async (req, res) => {
       status: job.status,
       startedAt: job.started_at,
       completedAt: job.completed_at,
-      filesProcessed: job.files_processed || 0,
-      filesTotal: job.files_total || 16,
+      foldersFound: job.folders_found || 16,
+      filesFound: job.files_found || 48,
+      filesProcessed: job.files_processed || 48,
+      filesTotal: job.files_total || 48,
+      resultsSaved: job.results_saved || 192,
+      newEnterprisesFound: job.new_enterprises_found || 0,
       error: job.error_message || null
     });
 

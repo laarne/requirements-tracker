@@ -55,10 +55,12 @@ CREATE POLICY "Allow public read history" ON public.human_review_history FOR SEL
 CREATE POLICY "Allow public insert history" ON public.human_review_history FOR INSERT WITH CHECK (true);
 
 
--- Table 3: Automated Scan Results
+-- Table 3: Automated Scan Results (Stores dynamic enterprise scan data)
 CREATE TABLE IF NOT EXISTS public.scan_results (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enterprise_id TEXT NOT NULL,
+    enterprise_name TEXT,
+    applicant_type TEXT DEFAULT 'INDIVIDUAL',
     requirement_id TEXT NOT NULL,
     file_id TEXT,
     file_name TEXT,
@@ -82,14 +84,18 @@ CREATE POLICY "Allow public read scan results" ON public.scan_results FOR SELECT
 CREATE POLICY "Allow public write scan results" ON public.scan_results FOR ALL USING (true) WITH CHECK (true);
 
 
--- Table 4: Online Scan Jobs (Status Tracking for Polling)
+-- Table 4: Online Scan Jobs (Status Tracking for Polling & Safe Diagnostics)
 CREATE TABLE IF NOT EXISTS public.scan_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     status TEXT NOT NULL DEFAULT 'QUEUED', -- QUEUED, RUNNING, COMPLETED, FAILED
     started_at TIMESTAMPTZ DEFAULT now(),
     completed_at TIMESTAMPTZ,
+    folders_found INTEGER DEFAULT 0,
+    files_found INTEGER DEFAULT 0,
     files_processed INTEGER DEFAULT 0,
     files_total INTEGER DEFAULT 0,
+    results_saved INTEGER DEFAULT 0,
+    new_enterprises_found INTEGER DEFAULT 0,
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );

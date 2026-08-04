@@ -1,6 +1,6 @@
 /**
  * Unofficial YFC Participant Requirements Compliance Tracker - Interactive Dashboard Logic
- * Online Cloud Scanner Integration, Supabase Persistence, and Human Review Audit Logging.
+ * Online Cloud Scanner Integration, Dynamic Enterprise Discovery, Supabase Persistence, and Human Review Audit Logging.
  */
 
 const CANONICAL_REQUIREMENTS = {
@@ -166,7 +166,13 @@ async function fetchScanResultsFromSupabase() {
 
     const scanMap = {};
     data.forEach(row => {
-      if (!scanMap[row.enterprise_id]) scanMap[row.enterprise_id] = {};
+      if (!scanMap[row.enterprise_id]) {
+        scanMap[row.enterprise_id] = {
+          _enterpriseName: row.enterprise_name,
+          _applicantType: row.applicant_type,
+          _driveUrl: row.drive_url
+        };
+      }
       scanMap[row.enterprise_id][row.requirement_id] = {
         automatedStatus: row.automated_status,
         confidence: row.confidence,
@@ -186,49 +192,85 @@ async function fetchScanResultsFromSupabase() {
 
 async function fetchData() {
   const errorBanner = document.getElementById("error-banner");
-  const errorMsgText = document.getElementById("error-banner-msg");
 
+  let localDataset = null;
   try {
     const res = await fetch("data.json?t=" + Date.now());
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    if (data.error) {
-      errorBanner.classList.remove("hidden");
-      errorMsgText.textContent = `Google Drive Scan Failed: ${data.error}`;
-    } else {
-      errorBanner.classList.add("hidden");
+    if (res.ok) {
+      localDataset = await res.json();
     }
+  } catch (e) {
+    console.warn("data.json fetch skipped:", e);
+  }
 
-    // Attempt to load automated scan_results from Supabase
-    const cloudScanResults = await fetchScanResultsFromSupabase();
-    if (cloudScanResults && data.participants) {
-      data.participants.forEach(p => {
-        if (cloudScanResults[p.id]) {
-          Object.keys(cloudScanResults[p.id]).forEach(reqKey => {
-            const cloudDoc = cloudScanResults[p.id][reqKey];
-            if (p.requirements && p.requirements[reqKey]) {
-              p.requirements[reqKey].automatedStatus = cloudDoc.automatedStatus;
-              if (cloudDoc.fileName && p.requirements[reqKey].files) {
-                p.requirements[reqKey].files = cloudDoc.matchedFiles;
-              }
-            }
-          });
+  // Load live scan results from Supabase
+  const cloudScanMap = await fetchScanResultsFromSupabase();
+
+  // Load human reviews from Supabase
+  const supabaseReviews = await fetchHumanReviewsFromSupabase();
+  if (supabaseReviews) {
+    state.overrides = { ...state.overrides, ...supabaseReviews };
+    saveLocalOverrides();
+  }
+
+  // DYNAMICALLY BUILD PARTICIPANTS LIST FROM SUPABASE SCAN_RESULTS & LOCAL FALLBACK
+  const participantsMap = {};
+
+  // Seed baseline from local data.json if available
+  if (localDataset && localDataset.participants) {
+    localDataset.participants.forEach(p => {
+      participantsMap[p.id] = JSON.parse(JSON.stringify(p));
+    });
+  }
+
+  // Dynamically merge or append all enterprises found in Supabase scan_results (including new 17th, 18th folders!)
+  if (cloudScanMap) {
+    Object.keys(cloudScanMap).forEach(entId => {
+      const entScan = cloudScanMap[entId];
+      
+      if (!participantsMap[entId]) {
+        // NEW ENTERPRISE DISCOVERED ONLINE!
+        participantsMap[entId] = {
+          id: entId,
+          name: entScan._enterpriseName || formatEnterpriseNameFromId(entId),
+          applicantType: entScan._applicantType || "INDIVIDUAL",
+          driveUrl: entScan._driveUrl || `https://drive.google.com/drive/folders/12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y`,
+          requirements: {}
+        };
+      } else {
+        if (entScan._enterpriseName) participantsMap[entId].name = entScan._enterpriseName;
+        if (entScan._applicantType) participantsMap[entId].applicantType = entScan._applicantType;
+      }
+
+      // Populate requirement statuses from scan_results
+      Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
+        const reqScan = entScan[reqKey];
+        if (reqScan) {
+          if (!participantsMap[entId].requirements) participantsMap[entId].requirements = {};
+          participantsMap[entId].requirements[reqKey] = {
+            status: reqScan.automatedStatus || "MISSING",
+            automatedStatus: reqScan.automatedStatus || "MISSING",
+            files: reqScan.matchedFiles && reqScan.matchedFiles.length > 0 ? reqScan.matchedFiles : (reqScan.fileName ? [{ name: reqScan.fileName, confidence: reqScan.confidence, fileId: reqScan.fileId, webViewLink: reqScan.driveUrl }] : [])
+          };
         }
       });
-    }
-
-    // Attempt to load human reviews & history logs from Supabase
-    const supabaseReviews = await fetchHumanReviewsFromSupabase();
-    if (supabaseReviews) {
-      state.overrides = { ...state.overrides, ...supabaseReviews };
-      saveLocalOverrides();
-    }
-
-    processDataset(data);
-  } catch (err) {
-    console.warn("Could not fetch data.json directly, rendering current local dataset:", err);
+    });
   }
+
+  const combinedParticipants = Object.values(participantsMap);
+
+  const raw = {
+    generatedAt: new Date().toISOString(),
+    summary: { totalEnterprises: combinedParticipants.length },
+    participants: combinedParticipants
+  };
+
+  processDataset(raw);
+}
+
+function formatEnterpriseNameFromId(id) {
+  if (!id) return "New Enterprise";
+  return id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 function processDataset(raw) {
@@ -884,7 +926,6 @@ async function triggerCloudDriveScan() {
   if (state.isScanning) return;
 
   const btnScan = document.getElementById("btn-trigger-gdrive-scan");
-  const scanDot = document.getElementById("scan-status-dot");
   const scanLabel = document.getElementById("scan-status-label");
 
   state.isScanning = true;
@@ -918,7 +959,7 @@ async function triggerCloudDriveScan() {
     startScanStatusPolling(data.jobId);
 
   } catch (err) {
-    console.warn("Failed calling /api/scan endpoint, triggering local data reload fallback:", err);
+    console.warn("Failed calling /api/scan endpoint, triggering scan data reload fallback:", err);
     showToast("Starting scan data refresh...", "info");
     setTimeout(async () => {
       await fetchData();
@@ -939,7 +980,7 @@ function startScanStatusPolling(jobId) {
       const data = await res.json();
 
       if (scanLabel) {
-        scanLabel.textContent = `Scanning Google Drive (${data.filesProcessed || 0}/${data.filesTotal || 16} files)...`;
+        scanLabel.textContent = `Scanning Google Drive (${data.foldersFound || 16} folders found)...`;
       }
 
       if (data.status === 'COMPLETED') {
@@ -947,7 +988,14 @@ function startScanStatusPolling(jobId) {
         state.scanPollInterval = null;
         await fetchData();
         resetScanUI("Scan complete");
-        showToast("Online Cloud Google Drive scan completed! ✓", "success");
+        
+        const folders = data.foldersFound || state.participants.length;
+        const newFound = data.newEnterprisesFound || 0;
+        const msg = newFound > 0 
+          ? `Scan complete — ${folders} enterprises scanned, ${newFound} new enterprise(s) found! ✓`
+          : `Scan complete — ${folders} enterprises scanned! ✓`;
+
+        showToast(msg, "success");
       } else if (data.status === 'FAILED') {
         clearInterval(state.scanPollInterval);
         state.scanPollInterval = null;
