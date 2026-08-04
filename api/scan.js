@@ -111,10 +111,14 @@ module.exports = async (req, res) => {
 
     // Diagnostic Counters
     let foldersFound = 0;
+    let uniqueFolderIdsCount = 0;
     let filesFound = 0;
     let filesProcessed = 0;
     let resultsSaved = 0;
     let newEnterprisesCount = 0;
+    let duplicateRecordsConsolidated = 0;
+    let possibleDuplicatesCount = 0;
+
     let scannedParticipants = [];
 
     if (driveService) {
@@ -122,17 +126,37 @@ module.exports = async (req, res) => {
       const gdriveFolders = await listChildFolders(driveService, MASTER_FOLDER_ID);
       foldersFound = gdriveFolders.length;
 
-      // Get existing enterprises from Supabase scan_results to detect new ones
-      const { data: existingScanData } = await supabase.from('scan_results').select('enterprise_id');
-      const existingEnterpriseIds = new Set((existingScanData || []).map(r => r.enterprise_id));
+      // Ensure stable enterprise identity by folder ID
+      const folderMap = new Map();
+      gdriveFolders.forEach(f => {
+        if (!folderMap.has(f.id)) {
+          folderMap.set(f.id, f);
+        }
+      });
+      uniqueFolderIdsCount = folderMap.size;
 
-      for (const folder of gdriveFolders) {
+      // Check near-duplicate folder names across DIFFERENT folder IDs for diagnostic flagging
+      const normNameSet = new Map();
+      folderMap.forEach((folder, folderId) => {
+        const norm = normalizeNameForComparison(folder.name);
+        if (normNameSet.has(norm)) {
+          possibleDuplicatesCount++;
+        } else {
+          normNameSet.set(norm, folderId);
+        }
+      });
+
+      // Get existing enterprises from Supabase scan_results to detect new ones
+      const { data: existingScanData } = await supabase.from('scan_results').select('enterprise_folder_id, enterprise_id');
+      const existingFolderIds = new Set((existingScanData || []).map(r => r.enterprise_folder_id || r.enterprise_id));
+
+      for (const [folderId, folder] of folderMap.entries()) {
         const entId = deriveEnterpriseId(folder.name);
-        if (!existingEnterpriseIds.has(entId)) {
+        if (!existingFolderIds.has(folderId) && !existingFolderIds.has(entId)) {
           newEnterprisesCount++;
         }
 
-        const files = await listFilesInFolder(driveService, folder.id);
+        const files = await listFilesInFolder(driveService, folderId);
         filesFound += files.length;
         filesProcessed += files.length;
 
@@ -140,11 +164,12 @@ module.exports = async (req, res) => {
         const reqs = processFilesForRequirements(files, applicantType);
 
         scannedParticipants.push({
+          enterpriseFolderId: folderId,
           id: entId,
           name: folder.name,
           applicantType: applicantType,
-          driveUrl: folder.webViewLink || `https://drive.google.com/drive/folders/${folder.id}`,
-          driveFolderId: folder.id,
+          driveUrl: folder.webViewLink || `https://drive.google.com/drive/folders/${folderId}`,
+          driveFolderId: folderId,
           requirements: reqs
         });
       }
@@ -156,18 +181,21 @@ module.exports = async (req, res) => {
       const defaultData = generateCloudDefaultScanDataset();
       scannedParticipants = defaultData.participants;
       foldersFound = scannedParticipants.length;
+      uniqueFolderIdsCount = scannedParticipants.length;
       filesFound = 48;
       filesProcessed = 48;
     }
 
-    // 4. Save automated scanner results to Supabase scan_results table
+    // 4. Idempotent Upsert to Supabase scan_results table using UNIQUE (enterprise_folder_id, requirement_id)
     const scanResultsToUpsert = [];
     scannedParticipants.forEach(p => {
+      const folderId = p.enterpriseFolderId || p.driveFolderId || p.id;
       Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
         const doc = (p.requirements && p.requirements[reqKey]) ? p.requirements[reqKey] : { status: "MISSING", files: [] };
         const topFile = doc.files && doc.files.length > 0 ? doc.files[0] : null;
 
         scanResultsToUpsert.push({
+          enterprise_folder_id: folderId,
           enterprise_id: p.id,
           enterprise_name: p.name,
           applicant_type: p.applicantType || "INDIVIDUAL",
@@ -177,7 +205,7 @@ module.exports = async (req, res) => {
           automated_status: doc.automatedStatus || doc.status || "MISSING",
           confidence: topFile ? (topFile.confidence || 0.0) : 0.0,
           document_type: CANONICAL_REQUIREMENTS[reqKey].name,
-          drive_url: p.driveUrl || `https://drive.google.com/drive/folders/${p.driveFolderId || ''}`,
+          drive_url: p.driveUrl || `https://drive.google.com/drive/folders/${folderId}`,
           matched_files: doc.files || [],
           scanned_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -188,7 +216,7 @@ module.exports = async (req, res) => {
     if (scanResultsToUpsert.length > 0) {
       const { error: upsertErr } = await supabase
         .from('scan_results')
-        .upsert(scanResultsToUpsert, { onConflict: 'enterprise_id,requirement_id' });
+        .upsert(scanResultsToUpsert, { onConflict: 'enterprise_folder_id,requirement_id' });
 
       if (upsertErr) console.warn("Scan results upsert warning:", upsertErr);
       resultsSaved = scanResultsToUpsert.length;
@@ -202,10 +230,13 @@ module.exports = async (req, res) => {
           status: 'COMPLETED',
           completed_at: new Date().toISOString(),
           folders_found: foldersFound,
+          unique_enterprise_folders: uniqueFolderIdsCount,
           files_found: filesFound,
           files_processed: filesProcessed,
           files_total: filesProcessed,
           results_saved: resultsSaved,
+          duplicate_records_consolidated: duplicateRecordsConsolidated,
+          possible_duplicates: possibleDuplicatesCount,
           new_enterprises_found: newEnterprisesCount,
           error_message: authError || null
         })
@@ -217,9 +248,12 @@ module.exports = async (req, res) => {
       jobId: jobId,
       status: "COMPLETED",
       foldersFound: foldersFound,
+      uniqueEnterpriseFolders: uniqueFolderIdsCount,
       filesFound: filesFound,
       filesProcessed: filesProcessed,
       resultsSaved: resultsSaved,
+      duplicateRecordsConsolidated: duplicateRecordsConsolidated,
+      possibleDuplicates: possibleDuplicatesCount,
       newEnterprisesFound: newEnterprisesCount,
       scannedAt: new Date().toISOString()
     });
@@ -227,7 +261,6 @@ module.exports = async (req, res) => {
   } catch (err) {
     console.error("Cloud scan failed:", err);
 
-    // Update job status to FAILED
     try {
       await supabase
         .from('scan_jobs')
@@ -322,6 +355,11 @@ function deriveEnterpriseId(folderName) {
   return clean || ('ent_' + Date.now());
 }
 
+function normalizeNameForComparison(name) {
+  if (!name) return "";
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
 function determineApplicantType(folderName, files) {
   const normFolder = folderName.toLowerCase();
   if (normFolder.includes("group") || normFolder.includes("association") || normFolder.includes("coop") || normFolder.includes("corp")) {
@@ -389,27 +427,28 @@ function processFilesForRequirements(files, applicantType) {
 
 function generateCloudDefaultScanDataset() {
   const DEFAULT_ENTERPRISES = [
-    { name: "AgriTurkey Farm Enterprise", id: "agriturkey", applicantType: "INDIVIDUAL" },
-    { name: "B&B Banana Chips", id: "bb_banana_chips", applicantType: "INDIVIDUAL" },
-    { name: "BP SQUASHÉLLA", id: "bp_squashella", applicantType: "GROUP" },
-    { name: "CAPRA VERDE", id: "capra_verde", applicantType: "INDIVIDUAL" },
-    { name: "Carias Piggery", id: "carias_piggery", applicantType: "INDIVIDUAL" },
-    { name: "D-Arco RIR and Native", id: "darco_rir", applicantType: "INDIVIDUAL" },
-    { name: "EcoCrunch", id: "ecocrunch", applicantType: "INDIVIDUAL" },
-    { name: "Franklins Golden Grain", id: "franklins_golden_grain", applicantType: "INDIVIDUAL" },
-    { name: "GILDGOAT", id: "gildgoat", applicantType: "INDIVIDUAL" },
-    { name: "GrowMate (Digital Agri-tech)", id: "growmate", applicantType: "GROUP" },
-    { name: "Kenths Boiler", id: "kenths_boiler", applicantType: "INDIVIDUAL" },
-    { name: "R&L Banana Crunch", id: "rl_banana_crunch", applicantType: "INDIVIDUAL" },
-    { name: "RDB'S Heartland Farm", id: "rdbs_heartland_farm", applicantType: "INDIVIDUAL" },
-    { name: "Royal Breed Genetic", id: "royal_breed_genetic", applicantType: "INDIVIDUAL" },
-    { name: "WormTastik", id: "wormtastik", applicantType: "INDIVIDUAL" },
-    { name: "YOLKYTOLK", id: "yolkytolk", applicantType: "INDIVIDUAL" }
+    { name: "AgriTurkey Farm Enterprise", id: "agriturkey", folderId: "folder_agriturkey", applicantType: "INDIVIDUAL" },
+    { name: "B&B Banana Chips", id: "bb_banana_chips", folderId: "folder_bb_banana_chips", applicantType: "INDIVIDUAL" },
+    { name: "BP SQUASHÉLLA", id: "bp_squashella", folderId: "folder_bp_squashella", applicantType: "GROUP" },
+    { name: "CAPRA VERDE", id: "capra_verde", folderId: "folder_capra_verde", applicantType: "INDIVIDUAL" },
+    { name: "Carias Piggery", id: "carias_piggery", folderId: "folder_carias_piggery", applicantType: "INDIVIDUAL" },
+    { name: "D-Arco RIR and Native", id: "darco_rir", folderId: "folder_darco_rir", applicantType: "INDIVIDUAL" },
+    { name: "EcoCrunch", id: "ecocrunch", folderId: "folder_ecocrunch", applicantType: "INDIVIDUAL" },
+    { name: "Franklins Golden Grain", id: "franklins_golden_grain", folderId: "folder_franklins_golden_grain", applicantType: "INDIVIDUAL" },
+    { name: "GILDGOAT", id: "gildgoat", folderId: "folder_gildgoat", applicantType: "INDIVIDUAL" },
+    { name: "GrowMate (Digital Agri-tech)", id: "growmate", folderId: "folder_growmate", applicantType: "GROUP" },
+    { name: "Kenths Boiler", id: "kenths_boiler", folderId: "folder_kenths_boiler", applicantType: "INDIVIDUAL" },
+    { name: "R&L Banana Crunch", id: "rl_banana_crunch", folderId: "folder_rl_banana_crunch", applicantType: "INDIVIDUAL" },
+    { name: "RDB'S Heartland Farm", id: "rdbs_heartland_farm", folderId: "folder_rdbs_heartland_farm", applicantType: "INDIVIDUAL" },
+    { name: "Royal Breed Genetic", id: "royal_breed_genetic", folderId: "folder_royal_breed_genetic", applicantType: "INDIVIDUAL" },
+    { name: "WormTastik", id: "wormtastik", folderId: "folder_wormtastik", applicantType: "INDIVIDUAL" },
+    { name: "YOLKYTOLK", id: "yolkytolk", folderId: "folder_yolkytolk", applicantType: "INDIVIDUAL" }
   ];
 
   return {
     generatedAt: new Date().toISOString(),
     participants: DEFAULT_ENTERPRISES.map(ent => ({
+      enterpriseFolderId: ent.folderId,
       id: ent.id,
       name: ent.name,
       applicantType: ent.applicantType,

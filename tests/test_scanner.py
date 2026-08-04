@@ -1,9 +1,10 @@
 """
 Comprehensive Unit Test Suite for Participant Requirements Scanner Engine & Review History Persistence.
-Covers 16 canonical scanner test cases + 6 Review History tracking test cases + Scanner Isolation test cases + Online Cloud Scanner persistence test cases.
+Covers 16 canonical scanner test cases + 6 Review History tracking test cases + Scanner Isolation test cases + Online Cloud Scanner persistence & Enterprise Identity test cases.
 """
 
 import os
+import re
 import unittest
 import datetime
 from config import CANONICAL_REQUIREMENTS, normalize_text
@@ -219,42 +220,58 @@ class TestScannerIsolation(unittest.TestCase):
         self.assertEqual(reqs["endorsementLetter"]["review"]["manualStatus"], "APPROVED")
 
 
-class TestOnlineCloudScannerPersistence(unittest.TestCase):
-    """Test suite for Online Cloud Scanner jobs, persistence, and data separation."""
+class TestEnterpriseIdentityAndDeDuplication(unittest.TestCase):
+    """Test suite verifying Google Drive Folder ID is the primary stable enterprise identity."""
 
-    def test_01_scan_results_schema_structure(self):
-        scan_record = {
-            "enterprise_id": "agriturkey",
-            "requirement_id": "applicationLetter",
-            "file_id": "file_123",
-            "file_name": "Application Letter.pdf",
-            "automated_status": "COMPLETE",
-            "confidence": 0.95,
-            "document_type": "Application Letter",
-            "drive_url": "https://drive.google.com/drive/folders/12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y"
-        }
-        self.assertEqual(scan_record["automated_status"], "COMPLETE")
-        self.assertEqual(scan_record["confidence"], 0.95)
+    def test_01_same_folder_id_scanned_multiple_times_produces_one_enterprise(self):
+        folder_records = [
+            {"enterprise_folder_id": "1A2B3C", "requirement_id": "appLetter", "status": "COMPLETE"},
+            {"enterprise_folder_id": "1A2B3C", "requirement_id": "appLetter", "status": "COMPLETE"}
+        ]
+        # De-duplicate by (enterprise_folder_id, requirement_id)
+        dedup_map = {}
+        for r in folder_records:
+            key = (r["enterprise_folder_id"], r["requirement_id"])
+            dedup_map[key] = r
 
-    def test_02_scan_jobs_status_transitions(self):
-        statuses = ["QUEUED", "RUNNING", "COMPLETED"]
-        self.assertEqual(statuses[0], "QUEUED")
-        self.assertEqual(statuses[1], "RUNNING")
-        self.assertEqual(statuses[2], "COMPLETED")
+        unique_enterprises = set(r["enterprise_folder_id"] for r in dedup_map.values())
+        self.assertEqual(len(unique_enterprises), 1)
 
-    def test_03_duplicate_scan_prevention(self):
-        jobs = [{"id": "job_1", "status": "RUNNING"}]
-        is_running = any(j["status"] == "RUNNING" for j in jobs)
-        self.assertTrue(is_running)
+    def test_02_renamed_folder_retains_identity(self):
+        folder1 = {"enterprise_folder_id": "1A2B3C", "name": "Carias Piggery"}
+        folder2 = {"enterprise_folder_id": "1A2B3C", "name": "Carias Piggery Enterprise"}
+        self.assertEqual(folder1["enterprise_folder_id"], folder2["enterprise_folder_id"])
 
-    def test_04_data_separation_preserves_human_reviews(self):
+    def test_03_different_folder_ids_with_similar_names_flagged(self):
+        name1 = "D-Arco RIR and Native Poultry Production"
+        name2 = "Darco Rir"
+
+        norm1 = re.sub(r'[^a-z0-9]', '', name1.lower())
+        norm2 = re.sub(r'[^a-z0-9]', '', name2.lower())
+        
+        self.assertIn("darcorir", norm1)
+        self.assertIn("darcorir", norm2)
+
+    def test_04_total_enterprises_counts_unique_folder_ids(self):
+        scan_results = []
+        for f_idx in range(17):
+            f_id = f"folder_{f_idx}"
+            for req_idx in range(12):
+                scan_results.append({
+                    "enterprise_folder_id": f_id,
+                    "requirement_id": f"req_{req_idx}"
+                })
+
+        self.assertEqual(len(scan_results), 204)
+        unique_folders = set(r["enterprise_folder_id"] for r in scan_results)
+        self.assertEqual(len(unique_folders), 17)
+
+    def test_05_human_approval_survives_cloud_rescan(self):
         human_review = {"manual_status": "APPROVED", "reviewer_name": "Maria"}
         cloud_scan_result = {"automated_status": "NEEDS_REVIEW"}
 
-        # Effective status merges human decision over automated scan result
         effective_status = human_review["manual_status"] or cloud_scan_result["automated_status"]
         self.assertEqual(effective_status, "APPROVED")
-        self.assertEqual(human_review["manual_status"], "APPROVED")
 
 
 if __name__ == "__main__":

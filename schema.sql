@@ -1,14 +1,16 @@
 -- ============================================================================
 -- Supabase Schema for Unofficial YFC Participant Requirements Tracker
+-- Stable Enterprise Identity Model: Google Drive Folder ID = Primary Enterprise Identity
 -- 1. public.human_reviews: Current/latest decision per enterprise + requirement.
 -- 2. public.human_review_history: Immutable audit log of every review action.
--- 3. public.scan_results: Automated Google Drive scanner outputs.
--- 4. public.scan_jobs: Online scan job status tracking for dashboard UI polling.
+-- 3. public.scan_results: Automated Google Drive scanner outputs keyed by enterprise_folder_id + requirement_id.
+-- 4. public.scan_jobs: Online scan job status tracking for dashboard UI polling & diagnostics.
 -- ============================================================================
 
 -- Table 1: Current/Latest Human Review Decisions
 CREATE TABLE IF NOT EXISTS public.human_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enterprise_folder_id TEXT,
     enterprise_id TEXT NOT NULL,
     requirement_id TEXT NOT NULL,
     file_id TEXT,
@@ -22,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.human_reviews (
 );
 
 CREATE INDEX IF NOT EXISTS idx_human_reviews_enterprise ON public.human_reviews(enterprise_id);
+CREATE INDEX IF NOT EXISTS idx_human_reviews_folder ON public.human_reviews(enterprise_folder_id);
 ALTER TABLE public.human_reviews ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read access" ON public.human_reviews;
@@ -34,6 +37,7 @@ CREATE POLICY "Allow public write access" ON public.human_reviews FOR ALL USING 
 -- Table 2: Immutable Review History Log (STRICTLY READ & INSERT ONLY)
 CREATE TABLE IF NOT EXISTS public.human_review_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enterprise_folder_id TEXT,
     enterprise_id TEXT NOT NULL,
     requirement_id TEXT NOT NULL,
     file_id TEXT,
@@ -46,6 +50,7 @@ CREATE TABLE IF NOT EXISTS public.human_review_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_human_review_history_ent_req ON public.human_review_history(enterprise_id, requirement_id);
+CREATE INDEX IF NOT EXISTS idx_human_review_history_folder ON public.human_review_history(enterprise_folder_id);
 ALTER TABLE public.human_review_history ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read history" ON public.human_review_history;
@@ -55,9 +60,10 @@ CREATE POLICY "Allow public read history" ON public.human_review_history FOR SEL
 CREATE POLICY "Allow public insert history" ON public.human_review_history FOR INSERT WITH CHECK (true);
 
 
--- Table 3: Automated Scan Results (Stores dynamic enterprise scan data)
+-- Table 3: Automated Scan Results (Keyed by Google Drive enterprise_folder_id + requirement_id)
 CREATE TABLE IF NOT EXISTS public.scan_results (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enterprise_folder_id TEXT NOT NULL,
     enterprise_id TEXT NOT NULL,
     enterprise_name TEXT,
     applicant_type TEXT DEFAULT 'INDIVIDUAL',
@@ -71,9 +77,10 @@ CREATE TABLE IF NOT EXISTS public.scan_results (
     matched_files JSONB DEFAULT '[]'::jsonb,
     scanned_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
-    CONSTRAINT unique_scan_enterprise_req UNIQUE (enterprise_id, requirement_id)
+    CONSTRAINT unique_scan_folder_req UNIQUE (enterprise_folder_id, requirement_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_scan_results_folder ON public.scan_results(enterprise_folder_id);
 CREATE INDEX IF NOT EXISTS idx_scan_results_enterprise ON public.scan_results(enterprise_id);
 ALTER TABLE public.scan_results ENABLE ROW LEVEL SECURITY;
 
@@ -91,10 +98,13 @@ CREATE TABLE IF NOT EXISTS public.scan_jobs (
     started_at TIMESTAMPTZ DEFAULT now(),
     completed_at TIMESTAMPTZ,
     folders_found INTEGER DEFAULT 0,
+    unique_enterprise_folders INTEGER DEFAULT 0,
     files_found INTEGER DEFAULT 0,
     files_processed INTEGER DEFAULT 0,
     files_total INTEGER DEFAULT 0,
     results_saved INTEGER DEFAULT 0,
+    duplicate_records_consolidated INTEGER DEFAULT 0,
+    possible_duplicates INTEGER DEFAULT 0,
     new_enterprises_found INTEGER DEFAULT 0,
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT now()

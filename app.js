@@ -1,6 +1,6 @@
 /**
  * Unofficial YFC Participant Requirements Compliance Tracker - Interactive Dashboard Logic
- * Online Cloud Scanner Integration, Dynamic Enterprise Discovery, Supabase Persistence, and Human Review Audit Logging.
+ * Stable Enterprise Identity Model: Google Drive Folder ID = Primary Enterprise Identity.
  */
 
 const CANONICAL_REQUIREMENTS = {
@@ -107,14 +107,20 @@ async function fetchHumanReviewsFromSupabase() {
 
     const reviewsMap = {};
     (data || []).forEach(row => {
-      if (!reviewsMap[row.enterprise_id]) reviewsMap[row.enterprise_id] = {};
-      reviewsMap[row.enterprise_id][row.requirement_id] = {
+      const entKey = row.enterprise_folder_id || row.enterprise_id;
+      if (!reviewsMap[entKey]) reviewsMap[entKey] = {};
+      reviewsMap[entKey][row.requirement_id] = {
         manualStatus: row.human_status,
         reviewedBy: row.reviewer_name || "Operational Reviewer",
         reviewedAt: row.updated_at || row.created_at,
         note: row.reviewer_notes || "",
         fileId: row.file_id || ""
       };
+      // Map both folder ID and enterprise string for fallback resilience
+      if (row.enterprise_id && row.enterprise_id !== entKey) {
+        if (!reviewsMap[row.enterprise_id]) reviewsMap[row.enterprise_id] = {};
+        reviewsMap[row.enterprise_id][row.requirement_id] = reviewsMap[entKey][row.requirement_id];
+      }
     });
 
     // Also fetch review history logs
@@ -126,7 +132,7 @@ async function fetchHumanReviewsFromSupabase() {
     if (histData) {
       const histMap = {};
       histData.forEach(h => {
-        const key = `${h.enterprise_id}_${h.requirement_id}`;
+        const key = `${h.enterprise_folder_id || h.enterprise_id}_${h.requirement_id}`;
         if (!histMap[key]) histMap[key] = [];
         histMap[key].push({
           id: h.id,
@@ -166,14 +172,17 @@ async function fetchScanResultsFromSupabase() {
 
     const scanMap = {};
     data.forEach(row => {
-      if (!scanMap[row.enterprise_id]) {
-        scanMap[row.enterprise_id] = {
+      const primaryFolderId = row.enterprise_folder_id || row.enterprise_id;
+      if (!scanMap[primaryFolderId]) {
+        scanMap[primaryFolderId] = {
+          _enterpriseFolderId: primaryFolderId,
+          _enterpriseId: row.enterprise_id,
           _enterpriseName: row.enterprise_name,
           _applicantType: row.applicant_type,
           _driveUrl: row.drive_url
         };
       }
-      scanMap[row.enterprise_id][row.requirement_id] = {
+      scanMap[primaryFolderId][row.requirement_id] = {
         automatedStatus: row.automated_status,
         confidence: row.confidence,
         documentType: row.document_type,
@@ -213,41 +222,45 @@ async function fetchData() {
     saveLocalOverrides();
   }
 
-  // DYNAMICALLY BUILD PARTICIPANTS LIST FROM SUPABASE SCAN_RESULTS & LOCAL FALLBACK
+  // STRICTLY GROUP BY PRIMARY STABLE IDENTITY (enterprise_folder_id) TO PREVENT DUPLICATES
   const participantsMap = {};
 
   // Seed baseline from local data.json if available
   if (localDataset && localDataset.participants) {
     localDataset.participants.forEach(p => {
-      participantsMap[p.id] = JSON.parse(JSON.stringify(p));
+      const primaryKey = p.enterpriseFolderId || p.driveFolderId || p.id;
+      participantsMap[primaryKey] = JSON.parse(JSON.stringify(p));
+      participantsMap[primaryKey].enterpriseFolderId = primaryKey;
     });
   }
 
-  // Dynamically merge or append all enterprises found in Supabase scan_results (including new 17th, 18th folders!)
+  // Dynamically merge or add enterprises from Supabase scan_results keyed by enterprise_folder_id
   if (cloudScanMap) {
-    Object.keys(cloudScanMap).forEach(entId => {
-      const entScan = cloudScanMap[entId];
+    Object.keys(cloudScanMap).forEach(folderKey => {
+      const entScan = cloudScanMap[folderKey];
       
-      if (!participantsMap[entId]) {
+      if (!participantsMap[folderKey]) {
         // NEW ENTERPRISE DISCOVERED ONLINE!
-        participantsMap[entId] = {
-          id: entId,
-          name: entScan._enterpriseName || formatEnterpriseNameFromId(entId),
+        participantsMap[folderKey] = {
+          enterpriseFolderId: folderKey,
+          id: entScan._enterpriseId || folderKey,
+          name: entScan._enterpriseName || formatEnterpriseNameFromId(folderKey),
           applicantType: entScan._applicantType || "INDIVIDUAL",
-          driveUrl: entScan._driveUrl || `https://drive.google.com/drive/folders/12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y`,
+          driveUrl: entScan._driveUrl || `https://drive.google.com/drive/folders/${folderKey}`,
+          driveFolderId: folderKey,
           requirements: {}
         };
       } else {
-        if (entScan._enterpriseName) participantsMap[entId].name = entScan._enterpriseName;
-        if (entScan._applicantType) participantsMap[entId].applicantType = entScan._applicantType;
+        if (entScan._enterpriseName) participantsMap[folderKey].name = entScan._enterpriseName;
+        if (entScan._applicantType) participantsMap[folderKey].applicantType = entScan._applicantType;
       }
 
       // Populate requirement statuses from scan_results
       Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
         const reqScan = entScan[reqKey];
         if (reqScan) {
-          if (!participantsMap[entId].requirements) participantsMap[entId].requirements = {};
-          participantsMap[entId].requirements[reqKey] = {
+          if (!participantsMap[folderKey].requirements) participantsMap[folderKey].requirements = {};
+          participantsMap[folderKey].requirements[reqKey] = {
             status: reqScan.automatedStatus || "MISSING",
             automatedStatus: reqScan.automatedStatus || "MISSING",
             files: reqScan.matchedFiles && reqScan.matchedFiles.length > 0 ? reqScan.matchedFiles : (reqScan.fileName ? [{ name: reqScan.fileName, confidence: reqScan.confidence, fileId: reqScan.fileId, webViewLink: reqScan.driveUrl }] : [])
@@ -278,7 +291,8 @@ function processDataset(raw) {
 
   state.participants = (raw.participants || []).map(p => {
     let copy = JSON.parse(JSON.stringify(p));
-    
+    const entKey = copy.enterpriseFolderId || copy.driveFolderId || copy.id;
+
     // Preserve automatedStatus separately from humanReview
     Object.keys(copy.requirements || {}).forEach(docKey => {
       const doc = copy.requirements[docKey];
@@ -287,13 +301,13 @@ function processDataset(raw) {
       }
     });
 
-    if (state.overrides[copy.id]) {
-      const pOverrides = state.overrides[copy.id];
-      Object.keys(pOverrides).forEach(docKey => {
+    const activeOverrides = state.overrides[entKey] || state.overrides[copy.id];
+    if (activeOverrides) {
+      Object.keys(activeOverrides).forEach(docKey => {
         if (copy.requirements[docKey]) {
-          copy.requirements[docKey].review = pOverrides[docKey];
-          if (pOverrides[docKey].manualStatus) {
-            copy.requirements[docKey].status = pOverrides[docKey].manualStatus;
+          copy.requirements[docKey].review = activeOverrides[docKey];
+          if (activeOverrides[docKey].manualStatus) {
+            copy.requirements[docKey].status = activeOverrides[docKey].manualStatus;
           }
         }
       });
@@ -575,7 +589,8 @@ function renderTable() {
 
   state.filteredParticipants.forEach(p => {
     const tr = document.createElement("tr");
-    tr.dataset.id = p.id;
+    const primaryKey = p.enterpriseFolderId || p.driveFolderId || p.id;
+    tr.dataset.id = primaryKey;
 
     let priorityBadgeClass = "priority-medium";
     if (p.priority === "HIGH") priorityBadgeClass = "priority-high";
@@ -604,11 +619,11 @@ function renderTable() {
       <td><span class="badge badge-missing">${p.missingCount}</span></td>
       <td><span class="badge-priority ${priorityBadgeClass}">${p.priority}</span></td>
       <td style="text-align:right;">
-        <button class="btn btn-secondary btn-sm btn-review-row" data-id="${p.id}">Review →</button>
+        <button class="btn btn-secondary btn-sm btn-review-row" data-id="${primaryKey}">Review →</button>
       </td>
     `;
 
-    tr.addEventListener("click", () => openDrawer(p.id));
+    tr.addEventListener("click", () => openDrawer(primaryKey));
     tbody.appendChild(tr);
   });
 }
@@ -632,17 +647,18 @@ function renderDocStatusBadge(status) {
 }
 
 function openDrawer(participantId) {
-  const p = state.participants.find(x => x.id === participantId);
+  const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.driveFolderId === participantId || x.id === participantId));
   if (!p) return;
 
-  state.selectedParticipantId = participantId;
+  const primaryFolderId = p.enterpriseFolderId || p.driveFolderId || p.id;
+  state.selectedParticipantId = primaryFolderId;
 
   document.getElementById("drawer-participant-name").textContent = p.name;
   document.getElementById("drawer-applicant-type").textContent = (p.applicantType || 'INDIVIDUAL').toUpperCase();
   document.getElementById("drawer-comp-rate-badge").textContent = `${p.completionRate}% Compliance`;
 
   const driveLink = document.getElementById("drawer-drive-url");
-  driveLink.href = p.driveUrl || `https://drive.google.com/drive/folders/${p.driveFolderId}`;
+  driveLink.href = p.driveUrl || `https://drive.google.com/drive/folders/${primaryFolderId}`;
 
   document.getElementById("drawer-subhead-counts").textContent = `${p.missingCount} Missing · ${p.needsReviewCount} Needs Review · ${p.completeCount} Complete`;
 
@@ -666,8 +682,8 @@ function openDrawer(participantId) {
     const isNotApplicable = docData.status === "NOT_APPLICABLE";
     const isUnresolved = docData.status === "MISSING" || docData.status === "NEEDS_REVIEW" || docData.status === "REJECTED";
 
-    const histKey = `${participantId}_${docKey}`;
-    const histLogs = state.reviewHistory[histKey] || [];
+    const histKey = `${primaryFolderId}_${docKey}`;
+    const histLogs = state.reviewHistory[histKey] || state.reviewHistory[`${p.id}_${docKey}`] || [];
     const histBadgeTag = histLogs.length > 0 ? `<span class="badge" style="background:#374151; color:#a5b4fc; font-size:0.65rem;">📜 ${histLogs.length} review${histLogs.length > 1 ? 's' : ''} logged</span>` : '';
 
     const card = document.createElement("div");
@@ -703,13 +719,13 @@ function openDrawer(participantId) {
     const btnApprove = card.querySelector(".btn-approve-doc");
     if (btnApprove) btnApprove.addEventListener("click", (e) => {
       e.stopPropagation();
-      setDocOverride(participantId, docKey, "COMPLETE");
+      setDocOverride(primaryFolderId, docKey, "COMPLETE");
     });
 
     const btnReject = card.querySelector(".btn-reject-doc");
     if (btnReject) btnReject.addEventListener("click", (e) => {
       e.stopPropagation();
-      setDocOverride(participantId, docKey, "MISSING");
+      setDocOverride(primaryFolderId, docKey, "MISSING");
     });
 
     if (isUnresolved && !isNotApplicable) {
@@ -738,17 +754,19 @@ function openDrawer(participantId) {
 
 function openNextEnterprise() {
   if (!state.selectedParticipantId || state.filteredParticipants.length === 0) return;
-  const idx = state.filteredParticipants.findIndex(p => p.id === state.selectedParticipantId);
+  const idx = state.filteredParticipants.findIndex(p => (p.enterpriseFolderId === state.selectedParticipantId || p.id === state.selectedParticipantId));
   if (idx !== -1 && idx < state.filteredParticipants.length - 1) {
-    openDrawer(state.filteredParticipants[idx + 1].id);
+    const nextP = state.filteredParticipants[idx + 1];
+    openDrawer(nextP.enterpriseFolderId || nextP.id);
   }
 }
 
 function openPrevEnterprise() {
   if (!state.selectedParticipantId || state.filteredParticipants.length === 0) return;
-  const idx = state.filteredParticipants.findIndex(p => p.id === state.selectedParticipantId);
+  const idx = state.filteredParticipants.findIndex(p => (p.enterpriseFolderId === state.selectedParticipantId || p.id === state.selectedParticipantId));
   if (idx > 0) {
-    openDrawer(state.filteredParticipants[idx - 1].id);
+    const prevP = state.filteredParticipants[idx - 1];
+    openDrawer(prevP.enterpriseFolderId || prevP.id);
   }
 }
 
@@ -759,7 +777,7 @@ function closeDrawer() {
 }
 
 function openDocInspector(docKey) {
-  const p = state.participants.find(x => x.id === state.selectedParticipantId);
+  const p = state.participants.find(x => (x.enterpriseFolderId === state.selectedParticipantId || x.id === state.selectedParticipantId));
   if (!p) return;
 
   state.selectedDocId = docKey;
@@ -774,6 +792,7 @@ function openDocInspector(docKey) {
   const reason = topFile ? topFile.reason : "No matching file found";
   const webLink = topFile ? topFile.webViewLink : (p.driveUrl || "#");
   const fsize = topFile ? topFile.size : 0;
+  const primaryFolderId = p.enterpriseFolderId || p.id;
 
   document.getElementById("modal-doc-type-title").textContent = CANONICAL_REQUIREMENTS[docKey];
   document.getElementById("modal-doc-filename").textContent = fname;
@@ -802,7 +821,7 @@ function openDocInspector(docKey) {
   document.getElementById("modal-reviewer-note").value = (doc.review && doc.review.note) ? doc.review.note : "";
 
   const previewBox = document.getElementById("doc-preview-container");
-  previewBox.innerHTML = renderMockDocPreview(fname, CANONICAL_REQUIREMENTS[docKey], files, webLink, topFile, p.id, docKey);
+  previewBox.innerHTML = renderMockDocPreview(fname, CANONICAL_REQUIREMENTS[docKey], files, webLink, topFile, primaryFolderId, docKey);
 
   document.getElementById("doc-modal-overlay").classList.remove("hidden");
 }
@@ -813,9 +832,10 @@ function closeDocInspector() {
 }
 
 async function setDocOverride(participantId, docKey, humanStatus, note = "") {
-  const p = state.participants.find(x => x.id === participantId);
+  const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.id === participantId));
   if (!p || !p.requirements[docKey]) return;
 
+  const primaryFolderId = p.enterpriseFolderId || p.driveFolderId || p.id;
   const doc = p.requirements[docKey];
   const previousStatus = doc.status || "MISSING";
   const topFile = doc.files && doc.files.length > 0 ? doc.files[0] : null;
@@ -845,7 +865,7 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
   };
 
   // Create local history entry log
-  const histKey = `${participantId}_${docKey}`;
+  const histKey = `${primaryFolderId}_${docKey}`;
   if (!state.reviewHistory[histKey]) state.reviewHistory[histKey] = [];
   
   const historyItem = {
@@ -861,18 +881,19 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
   state.reviewHistory[histKey].unshift(historyItem);
 
   // 1. Update local state fallback immediately
-  if (!state.overrides[participantId]) state.overrides[participantId] = {};
-  state.overrides[participantId][docKey] = reviewPayload;
+  if (!state.overrides[primaryFolderId]) state.overrides[primaryFolderId] = {};
+  state.overrides[primaryFolderId][docKey] = reviewPayload;
   saveLocalOverrides();
 
   // 2. Persist to Supabase (upsert latest decision + insert immutable history log)
   if (supabaseClient) {
     try {
-      // Upsert current decision
+      // Upsert current decision using enterprise_folder_id + requirement_id
       await supabaseClient
         .from('human_reviews')
         .upsert({
-          enterprise_id: participantId,
+          enterprise_folder_id: primaryFolderId,
+          enterprise_id: p.id,
           requirement_id: docKey,
           file_id: fileId,
           automated_status: doc.automatedStatus || doc.status,
@@ -886,7 +907,8 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
       await supabaseClient
         .from('human_review_history')
         .insert({
-          enterprise_id: participantId,
+          enterprise_folder_id: primaryFolderId,
+          enterprise_id: p.id,
           requirement_id: docKey,
           file_id: fileId,
           previous_status: previousStatus,
@@ -914,8 +936,8 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
   recalculateEnterpriseScores(p);
 
   applyFiltersAndRender();
-  if (state.selectedParticipantId === participantId) {
-    openDrawer(participantId);
+  if (state.selectedParticipantId === primaryFolderId) {
+    openDrawer(primaryFolderId);
   }
 }
 
@@ -980,7 +1002,7 @@ function startScanStatusPolling(jobId) {
       const data = await res.json();
 
       if (scanLabel) {
-        scanLabel.textContent = `Scanning Google Drive (${data.foldersFound || 16} folders found)...`;
+        scanLabel.textContent = `Scanning Google Drive (${data.uniqueEnterpriseFolders || data.foldersFound || 16} unique enterprise folders)...`;
       }
 
       if (data.status === 'COMPLETED') {
@@ -989,11 +1011,11 @@ function startScanStatusPolling(jobId) {
         await fetchData();
         resetScanUI("Scan complete");
         
-        const folders = data.foldersFound || state.participants.length;
+        const folders = data.uniqueEnterpriseFolders || data.foldersFound || state.participants.length;
         const newFound = data.newEnterprisesFound || 0;
         const msg = newFound > 0 
-          ? `Scan complete — ${folders} enterprises scanned, ${newFound} new enterprise(s) found! ✓`
-          : `Scan complete — ${folders} enterprises scanned! ✓`;
+          ? `Scan complete — ${folders} unique enterprise folders scanned, ${newFound} new enterprise(s) found! ✓`
+          : `Scan complete — ${folders} unique enterprise folders scanned! ✓`;
 
         showToast(msg, "success");
       } else if (data.status === 'FAILED') {
