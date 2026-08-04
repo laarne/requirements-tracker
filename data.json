@@ -1,0 +1,3753 @@
+{
+  "generatedAt": "2026-08-04T23:32:53.043362",
+  "source": {
+    "type": "google_drive",
+    "rootFolderId": "12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y",
+    "rootFolderName": "List of Enterprises"
+  },
+  "summary": {
+    "totalEnterprises": 16,
+    "fullyCompliant": 0,
+    "needsReview": 12,
+    "incomplete": 16,
+    "overallComplianceRate": 35.0
+  },
+  "warnings": [
+    {
+      "participant": "BP SQUASH\u00c9LLA",
+      "file": "IMG_20260730_220553.png",
+      "message": "Unclassified document format (IMG_20260730_220553.png)"
+    },
+    {
+      "participant": "CAPRA VERDE",
+      "file": "Ian Kenneth Canino Phil Health ID.pdf",
+      "message": "Unclassified document format (Ian Kenneth Canino Phil Health ID.pdf)"
+    },
+    {
+      "participant": "Carias Piggery",
+      "file": "CARIAS ID ",
+      "message": "Unclassified document format (CARIAS ID )"
+    },
+    {
+      "participant": "Franklins Golden Grain",
+      "file": "Final Bussines Mode Canva, Thank you Lord(1).pdf",
+      "message": "Unclassified document format (Final Bussines Mode Canva, Thank you Lord(1).pdf)"
+    },
+    {
+      "participant": "Franklins Golden Grain",
+      "file": "Final Bussines Mode Canva, Thank you Lord.docx",
+      "message": "Unclassified document format (Final Bussines Mode Canva, Thank you Lord.docx)"
+    },
+    {
+      "participant": "GILDGOAT",
+      "file": "Untitled document",
+      "message": "Unclassified document format (Untitled document)"
+    },
+    {
+      "participant": "Kenths Boiler",
+      "file": "cd8202e7-430f-423a-be5f-ca12831d3259.jpg",
+      "message": "Unclassified document format (cd8202e7-430f-423a-be5f-ca12831d3259.jpg)"
+    },
+    {
+      "participant": "R&L Banana Crunch ",
+      "file": "753445214_1663777271385846_2132327603754591087_n.jpg",
+      "message": "Unclassified document format (753445214_1663777271385846_2132327603754591087_n.jpg)"
+    },
+    {
+      "participant": "R&L Banana Crunch ",
+      "file": "754849374_2288487375228622_4604984701085927425_n.jpg",
+      "message": "Unclassified document format (754849374_2288487375228622_4604984701085927425_n.jpg)"
+    },
+    {
+      "participant": "Royal Breed Genetic",
+      "file": "ROYAL BREED GENETIC_CANTIGA.pdf",
+      "message": "Unclassified document format (ROYAL BREED GENETIC_CANTIGA.pdf)"
+    },
+    {
+      "participant": "WormTastik ",
+      "file": "passprt ID",
+      "message": "Unclassified document format (passprt ID)"
+    },
+    {
+      "participant": "WormTastik ",
+      "file": "picture.png",
+      "message": "Unclassified document format (picture.png)"
+    },
+    {
+      "participant": "WormTastik ",
+      "file": "LOGO.png",
+      "message": "Unclassified document format (LOGO.png)"
+    },
+    {
+      "participant": "YOLKYTOLK",
+      "file": "SARTE ID.docx",
+      "message": "Unclassified document format (SARTE ID.docx)"
+    }
+  ],
+  "participants": [
+    {
+      "id": "agriturkey",
+      "name": "AgriTurkey",
+      "driveFolderId": "1IdWQfK_mzOKp4Rc7LXtLP-W1FczCe_o_",
+      "driveUrl": "https://drive.google.com/drive/folders/1IdWQfK_mzOKp4Rc7LXtLP-W1FczCe_o_",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 54.5,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 6,
+      "missingCount": 3,
+      "needsReviewCount": 2,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1eZqKrnwGhyp9_oDOyRrTNYK4yUF7ySmv",
+              "name": "A. StartUp Individual Application Letter.pdf",
+              "mimeType": "application/pdf",
+              "size": 263740,
+              "webViewLink": "https://drive.google.com/file/d/1eZqKrnwGhyp9_oDOyRrTNYK4yUF7ySmv/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1R4fXERTY_blVOCILpujAnjUvdZpIS0T-",
+              "name": "B. Application Form Start-Up.pdf",
+              "mimeType": "application/pdf",
+              "size": 153429,
+              "webViewLink": "https://drive.google.com/file/d/1R4fXERTY_blVOCILpujAnjUvdZpIS0T-/view?usp=drivesdk",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1Doz9gtvps0pnPmrR4ljz67ws-OXPDu86",
+              "name": "2026-YFC-BMC-SOSMEN\u0304A-AGRITURKEY.pdf",
+              "mimeType": "application/pdf",
+              "size": 468799,
+              "webViewLink": "https://drive.google.com/file/d/1Doz9gtvps0pnPmrR4ljz67ws-OXPDu86/view?usp=drivesdk",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.9,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1WkCK8_TPThGnQP6MoR3TnppxvmNMjN0j",
+              "name": "Scanned copy valid ID",
+              "mimeType": "image/jpeg",
+              "size": 9465875,
+              "webViewLink": "https://drive.google.com/file/d/1WkCK8_TPThGnQP6MoR3TnppxvmNMjN0j/view?usp=drivesdk",
+              "requirement": "validId",
+              "confidence": 0.7,
+              "reason": "Filename matches 'valid id'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "valid id"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1EpJCFKDUUFBkE32kN3KX2JMkM25cB80D",
+              "name": "C. Individual Affidavit of New Business.pdf",
+              "mimeType": "application/pdf",
+              "size": 66197,
+              "webViewLink": "https://drive.google.com/file/d/1EpJCFKDUUFBkE32kN3KX2JMkM25cB80D/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "16whJ1BTu0NMz98egrNiFZz0pMkd_hm_A",
+              "name": "J. Authority to Use Land or Property.pdf",
+              "mimeType": "application/pdf",
+              "size": 88266,
+              "webViewLink": "https://drive.google.com/file/d/16whJ1BTu0NMz98egrNiFZz0pMkd_hm_A/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1_nUW86Io8FADDRFAVth4levpicl0oALa",
+              "name": "Residency",
+              "mimeType": "image/jpeg",
+              "size": 2941931,
+              "webViewLink": "https://drive.google.com/file/d/1_nUW86Io8FADDRFAVth4levpicl0oALa/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.7,
+              "reason": "Filename matches 'residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1Fw6nF807co-rjaeNXwuZS_ipCuSanYN8",
+              "name": "IMG_20260804_211204.jpg",
+              "mimeType": "image/jpeg",
+              "size": 3144054,
+              "webViewLink": "https://drive.google.com/file/d/1Fw6nF807co-rjaeNXwuZS_ipCuSanYN8/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.85,
+              "reason": "OCR content matches 'endorsement'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 591,
+              "detectionMethod": "OCR_CONTENT",
+              "detectedKeywords": [
+                "endorsement",
+                "city agriculture office",
+                "agriculture office"
+              ],
+              "snippet": "o CA gro Republic of the Philippines Province of Agusan del Sur CITY OF BAYUGAN CITY AGRICULTURE OFFICE (CAgrO) cao_bayugan@yahoo.com (085) 231-1800 ENDORSEMENT This is to respectfully endorse the request of HARLEY MAE C. SOSMENA with home address at...",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "photo2x2": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "18F-lvJDKFckR5RgDamWiKct_6Y-N1tSj",
+              "name": "2x2",
+              "mimeType": "image/png",
+              "size": 330023,
+              "webViewLink": "https://drive.google.com/file/d/18F-lvJDKFckR5RgDamWiKct_6Y-N1tSj/view?usp=drivesdk",
+              "requirement": "photo2x2",
+              "confidence": 0.7,
+              "reason": "Filename matches '2x2'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "2x2"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "bandb-banana-chips",
+      "name": "B&B Banana Chips",
+      "driveFolderId": "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP",
+      "driveUrl": "https://drive.google.com/drive/folders/1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 36.4,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 4,
+      "missingCount": 3,
+      "needsReviewCount": 4,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1eUIPtpKmAt-E156vc_rTMSy6SQB6P3Ys",
+              "name": "A. Start-Up Joint Application Letter (ELCARTE_ALBERT).pdf",
+              "mimeType": "application/pdf",
+              "size": 311450,
+              "webViewLink": "https://drive.google.com/file/d/1eUIPtpKmAt-E156vc_rTMSy6SQB6P3Ys/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "joint application",
+                "joint application letter",
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1tHAxquNkSQwudAMfGUVvTYVNoD9JchjQ",
+              "name": "B. Application Form Start-Up (ELCARTE_ALBERT).pdf",
+              "mimeType": "application/pdf",
+              "size": 556040,
+              "webViewLink": "https://drive.google.com/file/d/1tHAxquNkSQwudAMfGUVvTYVNoD9JchjQ/view?usp=drivesdk",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1yU4tnhShhf-pUz197v6ODToKxH0hlG0t",
+              "name": "YFC-BMC-TEMPLATE (ELCARTE_ALBERT).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 130798,
+              "webViewLink": "https://docs.google.com/document/d/1yU4tnhShhf-pUz197v6ODToKxH0hlG0t/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.9,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "bmc template",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1Ed2XQNUNRdXcZJ8YwIT4X0v2S7xMkjyH",
+              "name": "D. YFC-BMC-TEMPLATE (ELCARTE_ALBERT) (22).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 196258,
+              "webViewLink": "https://docs.google.com/document/d/1Ed2XQNUNRdXcZJ8YwIT4X0v2S7xMkjyH/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.9,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "bmc template",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1b6zww-lppoj5S08540dZ4J_8brsWwHDI",
+              "name": "NATIONAL ID (ELCARTE_ALBERT).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 392432,
+              "webViewLink": "https://docs.google.com/document/d/1b6zww-lppoj5S08540dZ4J_8brsWwHDI/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "validId",
+              "confidence": 0.7,
+              "reason": "Filename matches 'national id'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "national id"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1unWwypGnK888CC-xzZm_FBPAWY7fbR5T",
+              "name": "J. Authority to Use Land or Property (ELCARTE_ALBERT).pdf",
+              "mimeType": "application/pdf",
+              "size": 478087,
+              "webViewLink": "https://drive.google.com/file/d/1unWwypGnK888CC-xzZm_FBPAWY7fbR5T/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1CRLjgHrAsl6pm8-9Nl8_gsHLvjrjf0Cc",
+              "name": "C. Individual Affidavit of New Business (ELCARTE_ALBERT).pdf",
+              "mimeType": "application/pdf",
+              "size": 259827,
+              "webViewLink": "https://drive.google.com/file/d/1CRLjgHrAsl6pm8-9Nl8_gsHLvjrjf0Cc/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1YbR9Ha_yCZhWo48OgMrUtDSSA-lyfmvy",
+              "name": "RESIDENCY (ELCARTE_ALBERT)",
+              "mimeType": "image/jpeg",
+              "size": 109597,
+              "webViewLink": "https://drive.google.com/file/d/1YbR9Ha_yCZhWo48OgMrUtDSSA-lyfmvy/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.7,
+              "reason": "Filename matches 'residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1CDeX3bzfyP28lEbEyw0wVLayAn2FcAzz",
+              "name": "ENDORSEMENT LETTER (ALBERT ELCARTE)",
+              "mimeType": "image/jpeg",
+              "size": 276203,
+              "webViewLink": "https://drive.google.com/file/d/1CDeX3bzfyP28lEbEyw0wVLayAn2FcAzz/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.85,
+              "reason": "Filename matches 'endorsement letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "endorsement",
+                "endorsement letter",
+                "endorse"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "photo2x2": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1aEyXx84IX9vxjGARcuvf8tvEOBRtucxO",
+              "name": "2X2 ID.jpg",
+              "mimeType": "image/jpeg",
+              "size": 69961,
+              "webViewLink": "https://drive.google.com/file/d/1aEyXx84IX9vxjGARcuvf8tvEOBRtucxO/view?usp=drivesdk",
+              "requirement": "photo2x2",
+              "confidence": 0.99,
+              "reason": "Filename matches '2x2'; Image filename indicates 2x2 photo",
+              "ocrAttempted": true,
+              "ocrStatus": "FAILED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "2x2"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "bp-squash\u00e9lla",
+      "name": "BP SQUASH\u00c9LLA",
+      "driveFolderId": "1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0",
+      "driveUrl": "https://drive.google.com/drive/folders/1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0",
+      "applicantType": "GROUP",
+      "completionRate": 41.7,
+      "status": "INCOMPLETE",
+      "applicableRequirementsCount": 12,
+      "completeCount": 5,
+      "missingCount": 7,
+      "needsReviewCount": 0,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1InQ_ixzGKN6QAlaXvZjaICwOaBUUImVc",
+              "name": "A.Start-Up Join Application Letter.pdf",
+              "mimeType": "application/pdf",
+              "size": 156391,
+              "webViewLink": "https://drive.google.com/file/d/1InQ_ixzGKN6QAlaXvZjaICwOaBUUImVc/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1JzE54K3aqg90-2D1Jdp8QCJrl9A7GEWG",
+              "name": "B. Application Form Start-Up.pdf",
+              "mimeType": "application/pdf",
+              "size": 453477,
+              "webViewLink": "https://drive.google.com/file/d/1JzE54K3aqg90-2D1Jdp8QCJrl9A7GEWG/view?usp=drivesdk",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1JsVGCBRjQVoygbkBNrTKqggji5wbzJzV",
+              "name": "BMC",
+              "mimeType": "application/pdf",
+              "size": 978556,
+              "webViewLink": "https://drive.google.com/file/d/1JsVGCBRjQVoygbkBNrTKqggji5wbzJzV/view?usp=drivesdk",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.7,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1Jw-3aSRWvjGkVsojJqGrYaXYtvqfcNzj",
+              "name": "C. Joint Affidavit of New Business.pdf",
+              "mimeType": "application/pdf",
+              "size": 156278,
+              "webViewLink": "https://drive.google.com/file/d/1Jw-3aSRWvjGkVsojJqGrYaXYtvqfcNzj/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1JwEXdZgVhVrNPCaL-IvLgODuGP2-P4Zi",
+              "name": "I. Declaration of Intent.pdf",
+              "mimeType": "application/pdf",
+              "size": 122356,
+              "webViewLink": "https://drive.google.com/file/d/1JwEXdZgVhVrNPCaL-IvLgODuGP2-P4Zi/view?usp=drivesdk",
+              "requirement": "declarationOfIntent",
+              "confidence": 0.75,
+              "reason": "Filename matches 'declaration of intent'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "declaration of intent"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "capra-verde",
+      "name": "CAPRA VERDE",
+      "driveFolderId": "1OBSrOknbVKQ54wOVzy1wyl2r_L_wPeKi",
+      "driveUrl": "https://drive.google.com/drive/folders/1OBSrOknbVKQ54wOVzy1wyl2r_L_wPeKi",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 27.3,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 3,
+      "missingCount": 4,
+      "needsReviewCount": 4,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1ZgF03jGoPtds49M5qMxv487iuYqg2IQE",
+              "name": "A.-StartUp-Individual-Application-Letter.docx(CANINO).pdf",
+              "mimeType": "application/pdf",
+              "size": 252218,
+              "webViewLink": "https://drive.google.com/file/d/1ZgF03jGoPtds49M5qMxv487iuYqg2IQE/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1S7y-PNAsVOOtfFwOTIChqjOgem4d27cM",
+              "name": "B.-Application-Form-Start-Up.docxFINAL(CANINO).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 697819,
+              "webViewLink": "https://docs.google.com/document/d/1S7y-PNAsVOOtfFwOTIChqjOgem4d27cM/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1030O3PpHuuDlH89Ywuch-XmMWTa2ZyAS",
+              "name": "D.-YFC-BMC-Final-Template (CANINO)",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 71446,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1030O3PpHuuDlH89Ywuch-XmMWTa2ZyAS/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.8,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1_MpZNkU_EME6Y5Hc7qcdz6_xe7ZOqTUq",
+              "name": "CAPRA VERDE BMC.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 473548,
+              "webViewLink": "https://docs.google.com/document/d/1_MpZNkU_EME6Y5Hc7qcdz6_xe7ZOqTUq/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.75,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1dzKJIrY8u5_C8UY04pQQs-wkCizKW5iR",
+              "name": "J.-Authority-to-Use-Land-or-Property FINAL (CANINO).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 9674,
+              "webViewLink": "https://docs.google.com/document/d/1dzKJIrY8u5_C8UY04pQQs-wkCizKW5iR/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "15PP29-dvepnrdtx70P7_mZYEIs-fZm9U",
+              "name": "C.-Individual-Affidavit-of-New-Business.docxFINAL(CANINO).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 63583,
+              "webViewLink": "https://docs.google.com/document/d/15PP29-dvepnrdtx70P7_mZYEIs-fZm9U/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1tPoc3po8SWzdEc08-x-zDO4zCK7hSzak",
+              "name": "RESIDENCY (IAN KENNETH HINTAPAN CANINO).pdf",
+              "mimeType": "application/pdf",
+              "size": 396010,
+              "webViewLink": "https://drive.google.com/file/d/1tPoc3po8SWzdEc08-x-zDO4zCK7hSzak/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.75,
+              "reason": "Filename matches 'residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1QtHxIYSjU7Qj-1T2kpp6xY6JfBBjhBeU",
+              "name": "CANINO ENDORSEMENT LETTER .pdf",
+              "mimeType": "application/pdf",
+              "size": 450739,
+              "webViewLink": "https://drive.google.com/file/d/1QtHxIYSjU7Qj-1T2kpp6xY6JfBBjhBeU/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.9,
+              "reason": "Filename matches 'endorsement letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "endorsement",
+                "endorsement letter",
+                "endorse"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "photo2x2": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1gBjaQ_bUlR2g_Ok8ssJ0jW9rraMKNGPg",
+              "name": "CANINO 2X2.pdf",
+              "mimeType": "application/pdf",
+              "size": 126379,
+              "webViewLink": "https://drive.google.com/file/d/1gBjaQ_bUlR2g_Ok8ssJ0jW9rraMKNGPg/view?usp=drivesdk",
+              "requirement": "photo2x2",
+              "confidence": 0.7,
+              "reason": "Filename matches '2x2'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "2x2"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "carias-piggery",
+      "name": "Carias Piggery",
+      "driveFolderId": "1w5yWcoh0YUbWYOlRWLCUkj3CNh1Qvbwl",
+      "driveUrl": "https://drive.google.com/drive/folders/1w5yWcoh0YUbWYOlRWLCUkj3CNh1Qvbwl",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 36.4,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 4,
+      "missingCount": 4,
+      "needsReviewCount": 3,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "15hmWSSwUbF5CkhkXRU_o0lwS4gP95Kaa",
+              "name": "A.-StartUp-Individual-Application-Letter.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 11526,
+              "webViewLink": "https://docs.google.com/document/d/15hmWSSwUbF5CkhkXRU_o0lwS4gP95Kaa/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "19ZnZbhPRaUlrXlrZI1KUKrxdTnPh3YVt",
+              "name": "B.-Application-Form-Start-Up.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 1289568,
+              "webViewLink": "https://docs.google.com/document/d/19ZnZbhPRaUlrXlrZI1KUKrxdTnPh3YVt/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "16BOO3IJ6NAGjGcvpl8ZXkdaVOG5l_34_",
+              "name": "D.-YFC-BMC-TEMPLATE FINAL.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 428570,
+              "webViewLink": "https://docs.google.com/document/d/16BOO3IJ6NAGjGcvpl8ZXkdaVOG5l_34_/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.9,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "bmc template",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1tI7pW26mJTEZxS7olqgtGIgvvukVW1gu",
+              "name": " D.-YFC-BMC-Financials-Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 172259,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1tI7pW26mJTEZxS7olqgtGIgvvukVW1gu/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.8,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1tI7pW26mJTEZxS7olqgtGIgvvukVW1gu",
+              "name": " D.-YFC-BMC-Financials-Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 172259,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1tI7pW26mJTEZxS7olqgtGIgvvukVW1gu/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "bmcFinancials",
+              "confidence": 0.85,
+              "reason": "Filename matches 'bmc financials'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc financials template",
+                "bmc financial",
+                "yfc bmc financials",
+                "d yfc bmc financials template",
+                "bmc financials"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "financialFigures": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1tI7pW26mJTEZxS7olqgtGIgvvukVW1gu",
+              "name": " D.-YFC-BMC-Financials-Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 172259,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1tI7pW26mJTEZxS7olqgtGIgvvukVW1gu/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "financialFigures",
+              "confidence": 0.7,
+              "reason": "Filename matches 'financials template'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "financials template"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "14JYP3bSRN-dyM8pgwOkVdRN28GSQpBVD",
+              "name": "J.-Authority-to-Use-Land-or-Property.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 14128,
+              "webViewLink": "https://docs.google.com/document/d/14JYP3bSRN-dyM8pgwOkVdRN28GSQpBVD/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1ebxanzy2JpZSCqAMV62geiRmMIMtLEHV",
+              "name": "C.-Individual-Affidavit-of-New-Business.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 344771,
+              "webViewLink": "https://docs.google.com/document/d/1ebxanzy2JpZSCqAMV62geiRmMIMtLEHV/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "16z5GMX_H6bmWbyTOrBlbZKy5IYWqxOeylezAUqE9T0w",
+              "name": "RESIDENCY",
+              "mimeType": "application/vnd.google-apps.document",
+              "size": 167344,
+              "webViewLink": "https://docs.google.com/document/d/16z5GMX_H6bmWbyTOrBlbZKy5IYWqxOeylezAUqE9T0w/edit?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.65,
+              "reason": "Filename matches 'residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "d-arco-rir-and-native-poultry-production",
+      "name": "D-Arco RIR and Native Poultry Production",
+      "driveFolderId": "1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7",
+      "driveUrl": "https://drive.google.com/drive/folders/1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 45.5,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 5,
+      "missingCount": 3,
+      "needsReviewCount": 3,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1w5O-7A9jdWdRup4IKt1jyKA4JkMjOwAv",
+              "name": "A.-StartUp-Individual-Application-Letter. DIOLA docx.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 11632,
+              "webViewLink": "https://docs.google.com/document/d/1w5O-7A9jdWdRup4IKt1jyKA4JkMjOwAv/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1r-H5nOXmCs-KaQ4j8qp-hA0zy_RUjz9y",
+              "name": "B.-Application-Form-Start-Up. DIOLA docx.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 535388,
+              "webViewLink": "https://docs.google.com/document/d/1r-H5nOXmCs-KaQ4j8qp-hA0zy_RUjz9y/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1e3DPujAo2UwPrOGEDfiV5EkSyLp7u485",
+              "name": "D.-YFC-BMC DIOLA -Financials-Template-1.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 75010,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1e3DPujAo2UwPrOGEDfiV5EkSyLp7u485/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.8,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1e3DPujAo2UwPrOGEDfiV5EkSyLp7u485",
+              "name": "D.-YFC-BMC DIOLA -Financials-Template-1.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 75010,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1e3DPujAo2UwPrOGEDfiV5EkSyLp7u485/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "financialFigures",
+              "confidence": 0.7,
+              "reason": "Filename matches 'financials template'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "financials template"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "validId": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "11osT2E7fGIrdw__AjomG8r37LpGGkiQH",
+              "name": "DIOLA-VALID ID for YFC.pdf",
+              "mimeType": "application/pdf",
+              "size": 392109,
+              "webViewLink": "https://drive.google.com/file/d/11osT2E7fGIrdw__AjomG8r37LpGGkiQH/view?usp=drivesdk",
+              "requirement": "validId",
+              "confidence": 0.75,
+              "reason": "Filename matches 'valid id'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "valid id"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1OHoIlUIFhHzqN6Nb9bg4uOAzLr63JHnh",
+              "name": "C.-Individual-Affidavit-of-New-Business.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 14544,
+              "webViewLink": "https://docs.google.com/document/d/1OHoIlUIFhHzqN6Nb9bg4uOAzLr63JHnh/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1WcYmqL5EDvI11rvHnOofHh_H15lf7645",
+              "name": "J.-Authority-to-Use-Land-or-Property.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 14152,
+              "webViewLink": "https://docs.google.com/document/d/1WcYmqL5EDvI11rvHnOofHh_H15lf7645/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1JtZ2W0FJ0BOnxDl3PLuqE53etrqxkk_2",
+              "name": "RESIDENCY / ENDORSEMENT",
+              "mimeType": "application/pdf",
+              "size": 1201344,
+              "webViewLink": "https://drive.google.com/file/d/1JtZ2W0FJ0BOnxDl3PLuqE53etrqxkk_2/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.7,
+              "reason": "Filename matches 'residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "proofOfResidency",
+                  "name": "Proof of Barangay Residency",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1JtZ2W0FJ0BOnxDl3PLuqE53etrqxkk_2",
+              "name": "RESIDENCY / ENDORSEMENT",
+              "mimeType": "application/pdf",
+              "size": 1201344,
+              "webViewLink": "https://drive.google.com/file/d/1JtZ2W0FJ0BOnxDl3PLuqE53etrqxkk_2/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.85,
+              "reason": "Filename matches 'endorsement'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "endorsement",
+                "endorse"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "proofOfResidency",
+                  "name": "Proof of Barangay Residency",
+                  "confidence": 0.7
+                }
+              ]
+            },
+            {
+              "fileId": "1unNudau-wHWk_2dpmUVevURM8CpDNrtt",
+              "name": "Endorsement Letter",
+              "mimeType": "application/pdf",
+              "size": 472158,
+              "webViewLink": "https://drive.google.com/file/d/1unNudau-wHWk_2dpmUVevURM8CpDNrtt/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.85,
+              "reason": "Filename matches 'endorsement letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "endorsement",
+                "endorsement letter",
+                "endorse"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "ecocrunch-",
+      "name": "EcoCrunch ",
+      "driveFolderId": "1pXj5XBScXMfyAR3Eb065Dz8wMrD8EW65",
+      "driveUrl": "https://drive.google.com/drive/folders/1pXj5XBScXMfyAR3Eb065Dz8wMrD8EW65",
+      "applicantType": "GROUP",
+      "completionRate": 33.3,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 12,
+      "completeCount": 4,
+      "missingCount": 7,
+      "needsReviewCount": 1,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1tsm22QYqzOaYduOGKtmqtbyU9qobRTM0",
+              "name": "A. Start-Up Joint Application Letter.pdf",
+              "mimeType": "application/pdf",
+              "size": 100530,
+              "webViewLink": "https://drive.google.com/file/d/1tsm22QYqzOaYduOGKtmqtbyU9qobRTM0/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "joint application",
+                "joint application letter",
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1eI4oRVo8d1rrRb65Td-G2ftDotIDGvld",
+              "name": "B. EC Application Form Start-Up.pdf",
+              "mimeType": "application/pdf",
+              "size": 175485,
+              "webViewLink": "https://drive.google.com/file/d/1eI4oRVo8d1rrRb65Td-G2ftDotIDGvld/view?usp=drivesdk",
+              "requirement": "applicationForm",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1zRVJVWm550Hyx56eKPBwd4bNiOHwtebd",
+              "name": "2026-YFC-BMC-ECOCRUNCH.pdf",
+              "mimeType": "application/pdf",
+              "size": 521497,
+              "webViewLink": "https://drive.google.com/file/d/1zRVJVWm550Hyx56eKPBwd4bNiOHwtebd/view?usp=drivesdk",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.9,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1mHmaJHgqzg4U62yTxgNPQDGEbKBTLsIQ",
+              "name": "C. Joint Affidavit of New Business.pdf",
+              "mimeType": "application/pdf",
+              "size": 64858,
+              "webViewLink": "https://drive.google.com/file/d/1mHmaJHgqzg4U62yTxgNPQDGEbKBTLsIQ/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "18oC_bJ3Mu8c0I_kycORcfhqv_JMjwVQU",
+              "name": "J. Authority to Use Land or Property.pdf",
+              "mimeType": "application/pdf",
+              "size": 87730,
+              "webViewLink": "https://drive.google.com/file/d/18oC_bJ3Mu8c0I_kycORcfhqv_JMjwVQU/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1R8qF9UChzldme7T5f7nZA-5T-4DcKobr",
+              "name": "I. EC Declaration of Intent.pdf",
+              "mimeType": "application/pdf",
+              "size": 67895,
+              "webViewLink": "https://drive.google.com/file/d/1R8qF9UChzldme7T5f7nZA-5T-4DcKobr/view?usp=drivesdk",
+              "requirement": "declarationOfIntent",
+              "confidence": 0.75,
+              "reason": "Filename matches 'declaration of intent'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "declaration of intent"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "franklins-golden-grain",
+      "name": "Franklins Golden Grain",
+      "driveFolderId": "1bXBMghKdll8_RQo2GyfrKrfQ1s4wdJqq",
+      "driveUrl": "https://drive.google.com/drive/folders/1bXBMghKdll8_RQo2GyfrKrfQ1s4wdJqq",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 45.5,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 5,
+      "missingCount": 5,
+      "needsReviewCount": 1,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "12IFAZILG-eU4s2HxQlc7t-Yn04AEGDxp",
+              "name": "Final Application Letter.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 257171,
+              "webViewLink": "https://docs.google.com/document/d/12IFAZILG-eU4s2HxQlc7t-Yn04AEGDxp/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1OMS_sCKy_cvDpEGM79UMasUsfM-0qHMq",
+              "name": "Final Application Form.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 806118,
+              "webViewLink": "https://docs.google.com/document/d/1OMS_sCKy_cvDpEGM79UMasUsfM-0qHMq/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationForm",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1yOKvjMYJX4DjqhYpGNn3y-lWnlYIxc1A",
+              "name": "Valid ID.pdf",
+              "mimeType": "application/pdf",
+              "size": 820175,
+              "webViewLink": "https://drive.google.com/file/d/1yOKvjMYJX4DjqhYpGNn3y-lWnlYIxc1A/view?usp=drivesdk",
+              "requirement": "validId",
+              "confidence": 0.75,
+              "reason": "Filename matches 'valid id'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "valid id"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "swornStatement": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1Degj8hqG1ueFSxCjy-0-Pn9OX0do9xvn",
+              "name": "Final Sworn Statement of New Bussines.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 41418,
+              "webViewLink": "https://docs.google.com/document/d/1Degj8hqG1ueFSxCjy-0-Pn9OX0do9xvn/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.75,
+              "reason": "Filename matches 'sworn statement'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "sworn statement"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1-awDxDaXxHCQMF51lRFdabnDy-BRBSps",
+              "name": "Proof of Residency.pdf",
+              "mimeType": "application/pdf",
+              "size": 853940,
+              "webViewLink": "https://drive.google.com/file/d/1-awDxDaXxHCQMF51lRFdabnDy-BRBSps/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.9,
+              "reason": "Filename matches 'proof of residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "proof of residency",
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "11Ib2KJNjSH2OCA-0eRaQqHvDHMCQIZXF",
+              "name": "2x2 picture.jpg",
+              "mimeType": "image/jpeg",
+              "size": 30100,
+              "webViewLink": "https://drive.google.com/file/d/11Ib2KJNjSH2OCA-0eRaQqHvDHMCQIZXF/view?usp=drivesdk",
+              "requirement": "photo2x2",
+              "confidence": 0.99,
+              "reason": "Filename matches '2x2'; Image filename indicates 2x2 photo",
+              "ocrAttempted": true,
+              "ocrStatus": "FAILED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "2x2"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "gildgoat",
+      "name": "GILDGOAT",
+      "driveFolderId": "1MNWXefNhdC4wfjBKshB8DhRX_JsCl3D6",
+      "driveUrl": "https://drive.google.com/drive/folders/1MNWXefNhdC4wfjBKshB8DhRX_JsCl3D6",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 36.4,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 4,
+      "missingCount": 5,
+      "needsReviewCount": 2,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1TSns53ttTsnC9299cekqpY6Rh8JJ2lJZ",
+              "name": "A-StartUp-Individual-Application-Letter.pdf",
+              "mimeType": "application/pdf",
+              "size": 2393014,
+              "webViewLink": "https://drive.google.com/file/d/1TSns53ttTsnC9299cekqpY6Rh8JJ2lJZ/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1gMguL8Q-o4N5wDsgz3uvovDerCijacZE",
+              "name": "B.-Application-Form-Start-Up (1) (1).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 980193,
+              "webViewLink": "https://docs.google.com/document/d/1gMguL8Q-o4N5wDsgz3uvovDerCijacZE/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1KkKH6dWk2fljew0RY4-fjVhFbZNPUe4a",
+              "name": "Valid ID.pdf",
+              "mimeType": "application/pdf",
+              "size": 582958,
+              "webViewLink": "https://drive.google.com/file/d/1KkKH6dWk2fljew0RY4-fjVhFbZNPUe4a/view?usp=drivesdk",
+              "requirement": "validId",
+              "confidence": 0.75,
+              "reason": "Filename matches 'valid id'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "valid id"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "10pABL4MLHvdrmZ8f5XbjPt2uI-qxMsaJ",
+              "name": "J.-Authority-to-Use-Land-or-Property (1).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 8037,
+              "webViewLink": "https://docs.google.com/document/d/10pABL4MLHvdrmZ8f5XbjPt2uI-qxMsaJ/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1Cl-7c-ZjTrvfqGrzSyXQPWcNQd7lXJyx",
+              "name": "C.-Individual-Affidavit-of-New-Business.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 9134,
+              "webViewLink": "https://docs.google.com/document/d/1Cl-7c-ZjTrvfqGrzSyXQPWcNQd7lXJyx/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "120u_lesLwx_Kz1maokf0_gm_NOSnlyVi",
+              "name": "Proof of residency ",
+              "mimeType": "image/jpeg",
+              "size": 1868061,
+              "webViewLink": "https://drive.google.com/file/d/120u_lesLwx_Kz1maokf0_gm_NOSnlyVi/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.85,
+              "reason": "Filename matches 'proof of residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "proof of residency",
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1Apb8GQxsvP6LDjwb98zkHOlPexg4Ab6O",
+              "name": "2x2 picture ",
+              "mimeType": "image/png",
+              "size": 449898,
+              "webViewLink": "https://drive.google.com/file/d/1Apb8GQxsvP6LDjwb98zkHOlPexg4Ab6O/view?usp=drivesdk",
+              "requirement": "photo2x2",
+              "confidence": 0.7,
+              "reason": "Filename matches '2x2'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "2x2"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "growmate(digital-agri-tech)",
+      "name": "GrowMate(Digital Agri-tech)",
+      "driveFolderId": "1LFuja6vWFupYjg5t_CLSvfTkfd6We1Px",
+      "driveUrl": "https://drive.google.com/drive/folders/1LFuja6vWFupYjg5t_CLSvfTkfd6We1Px",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 72.7,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 8,
+      "missingCount": 1,
+      "needsReviewCount": 2,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1KCd0eOz3et_Zr55txp8HGx_c_1ijkeyI",
+              "name": "A.-StartUp-Individual-Application-Letter.pdf",
+              "mimeType": "application/pdf",
+              "size": 170299,
+              "webViewLink": "https://drive.google.com/file/d/1KCd0eOz3et_Zr55txp8HGx_c_1ijkeyI/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1vNwKGu_opWJ_KsHHG90AU8wZPzzyS75K",
+              "name": "B.-Application-Form-Start-Up_F.pdf",
+              "mimeType": "application/pdf",
+              "size": 344963,
+              "webViewLink": "https://drive.google.com/file/d/1vNwKGu_opWJ_KsHHG90AU8wZPzzyS75K/view?usp=drivesdk",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1egOVsdA-t3Uu-CN47dZRg9F6vepp5x4P",
+              "name": "D.-YFC-BMC-TEMPLATE_GrowMate.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 179892,
+              "webViewLink": "https://docs.google.com/document/d/1egOVsdA-t3Uu-CN47dZRg9F6vepp5x4P/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.9,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "bmc template",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1fj7PxAS1qVuJ4sBD8r_Lf1C_4-JmKUy9",
+              "name": "04_GrowMate_Financial_Plan.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 184835,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1fj7PxAS1qVuJ4sBD8r_Lf1C_4-JmKUy9/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "bmcFinancials",
+              "confidence": 0.7,
+              "reason": "Filename matches 'financial plan'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "financial plan"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "financialFigures": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1fj7PxAS1qVuJ4sBD8r_Lf1C_4-JmKUy9",
+              "name": "04_GrowMate_Financial_Plan.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 184835,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1fj7PxAS1qVuJ4sBD8r_Lf1C_4-JmKUy9/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "financialFigures",
+              "confidence": 0.7,
+              "reason": "Filename matches 'financial plan'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "financial plan"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "validId": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1zD6LjCo8X0bceGfZcCfYHc4xjISUcmZE",
+              "name": "scanned_phil_id_1page.pdf",
+              "mimeType": "application/pdf",
+              "size": 1915600,
+              "webViewLink": "https://drive.google.com/file/d/1zD6LjCo8X0bceGfZcCfYHc4xjISUcmZE/view?usp=drivesdk",
+              "requirement": "validId",
+              "confidence": 0.75,
+              "reason": "Filename matches 'phil id'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "phil id"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "swornStatement": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "13FIn9pNlpeYWh6S_NyH_4bN7MUqdAr0-",
+              "name": "Affidavit_of_New_Business_GrowMate.pdf",
+              "mimeType": "application/pdf",
+              "size": 106941,
+              "webViewLink": "https://drive.google.com/file/d/13FIn9pNlpeYWh6S_NyH_4bN7MUqdAr0-/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1IBEr03ugv1Fxtf_0KoLf4XtVGb8vcTDG",
+              "name": "residency.png",
+              "mimeType": "image/png",
+              "size": 2718415,
+              "webViewLink": "https://drive.google.com/file/d/1IBEr03ugv1Fxtf_0KoLf4XtVGb8vcTDG/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.75,
+              "reason": "Filename matches 'residency'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 670,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "residency"
+              ],
+              "snippet": "o' tho mov.u e Municipoitv o' BARANGAY SAN 'MORO ornce or PUNONG BARANGAY or IEESIDENCY to WHOM MAY CONCERN: THIS ts to CERTIFY that MR. JOHN MICHAEL D. BERINGUEL singje ond o bono fide resident of Purok 2, Barangay San Isi&o. $ar&-tcgco. Aguson del ...",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1lzMFfj8Zd9BOO6_7ZgQL8VeJtlv5zBuy",
+              "name": "RECCOMENDATION.jpg",
+              "mimeType": "image/jpeg",
+              "size": 2732939,
+              "webViewLink": "https://drive.google.com/file/d/1lzMFfj8Zd9BOO6_7ZgQL8VeJtlv5zBuy/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.99,
+              "reason": "Filename matches 'reccomendation'; OCR content matches 'endorsement'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 1239,
+              "detectionMethod": "FILENAME_AND_OCR",
+              "detectedKeywords": [
+                "agriculture office",
+                "reccomendation",
+                "endorses",
+                "municipal agriculture office",
+                "endorsement",
+                "proudly endorses"
+              ],
+              "snippet": "Republic of the Philippines Province of Agusan del Sur MUNICIPALITY OF SAN FRANCISCO San Francisco, Agusan del Sur BAGONG Email Address: mao.sfads@yahoocom ENDORSEMENT The Municipal Agriculture Office of San Francisco, Agusan del Sur proudly endorses...",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "photo2x2": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "190uJnOREJXuq7iOmJFLPg0WF5ump0nT0",
+              "name": "2x2 ID.png",
+              "mimeType": "image/png",
+              "size": 1613971,
+              "webViewLink": "https://drive.google.com/file/d/190uJnOREJXuq7iOmJFLPg0WF5ump0nT0/view?usp=drivesdk",
+              "requirement": "photo2x2",
+              "confidence": 0.99,
+              "reason": "Filename matches '2x2'; Image filename indicates 2x2 photo",
+              "ocrAttempted": true,
+              "ocrStatus": "FAILED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "2x2"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "kenths-boiler",
+      "name": "Kenths Boiler",
+      "driveFolderId": "1sfKRinEAGhlHrH3eq5E8lASzS6cPxDkM",
+      "driveUrl": "https://drive.google.com/drive/folders/1sfKRinEAGhlHrH3eq5E8lASzS6cPxDkM",
+      "applicantType": "GROUP",
+      "completionRate": 58.3,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 12,
+      "completeCount": 7,
+      "missingCount": 2,
+      "needsReviewCount": 3,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1xMAZNfQgI1D1lvafucBsDmUUDbntO7se",
+              "name": "A. StartUp Individual Application Letter.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 275539,
+              "webViewLink": "https://docs.google.com/document/d/1xMAZNfQgI1D1lvafucBsDmUUDbntO7se/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "15JjeiuRFWiTZ4XAQoGE0cQpUaBUr2udz",
+              "name": "CamScanner 29-07-2026 19.30.jpg",
+              "mimeType": "image/jpeg",
+              "size": 2649637,
+              "webViewLink": "https://drive.google.com/file/d/15JjeiuRFWiTZ4XAQoGE0cQpUaBUr2udz/view?usp=drivesdk",
+              "requirement": "applicationForm",
+              "confidence": 0.6,
+              "reason": "OCR content matches 'date of birth'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 745,
+              "detectionMethod": "OCR_CONTENT",
+              "detectedKeywords": [
+                "date of birth"
+              ],
+              "snippet": "REPUBLiKA NG PILIPINAS Republic of the Phlllpplnes PAMBANSANG PAGKAKAKILANLAN Phllippino Identification PCN: 2860-5271-9738-0253 Apelyido/Last Name REBUCAS Mga Pangalan/Given Namos KENTH ANGELOU Kasarian/Sex MALE Araw ng Kapanganakan/Date of Birth JU...",
+              "candidateRequirements": [
+                {
+                  "requirement": "applicationForm",
+                  "name": "Application Form",
+                  "confidence": 0.6
+                }
+              ]
+            },
+            {
+              "fileId": "1EsgKbQIXvaZY--nXYGL5E2IJIXoSxR9Q",
+              "name": "B. Application Form Start-Up.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 552781,
+              "webViewLink": "https://docs.google.com/document/d/1EsgKbQIXvaZY--nXYGL5E2IJIXoSxR9Q/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "17mdJeBBPUVWsB3PWA9CGQ3AsOOH6rpet",
+              "name": "D. YFC - BMC - Financials Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 174662,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/17mdJeBBPUVWsB3PWA9CGQ3AsOOH6rpet/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.8,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "17mdJeBBPUVWsB3PWA9CGQ3AsOOH6rpet",
+              "name": "D. YFC - BMC - Financials Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 174662,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/17mdJeBBPUVWsB3PWA9CGQ3AsOOH6rpet/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "bmcFinancials",
+              "confidence": 0.85,
+              "reason": "Filename matches 'bmc financials'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc financials template",
+                "bmc financial",
+                "yfc bmc financials",
+                "d yfc bmc financials template",
+                "bmc financials"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "financialFigures": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "17mdJeBBPUVWsB3PWA9CGQ3AsOOH6rpet",
+              "name": "D. YFC - BMC - Financials Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 174662,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/17mdJeBBPUVWsB3PWA9CGQ3AsOOH6rpet/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "financialFigures",
+              "confidence": 0.7,
+              "reason": "Filename matches 'financials template'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "financials template"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "validId": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "15JjeiuRFWiTZ4XAQoGE0cQpUaBUr2udz",
+              "name": "CamScanner 29-07-2026 19.30.jpg",
+              "mimeType": "image/jpeg",
+              "size": 2649637,
+              "webViewLink": "https://drive.google.com/file/d/15JjeiuRFWiTZ4XAQoGE0cQpUaBUr2udz/view?usp=drivesdk",
+              "requirement": "validId",
+              "confidence": 0.75,
+              "reason": "OCR content matches 'date of birth'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 745,
+              "detectionMethod": "OCR_CONTENT",
+              "detectedKeywords": [
+                "date of birth",
+                "philid"
+              ],
+              "snippet": "REPUBLiKA NG PILIPINAS Republic of the Phlllpplnes PAMBANSANG PAGKAKAKILANLAN Phllippino Identification PCN: 2860-5271-9738-0253 Apelyido/Last Name REBUCAS Mga Pangalan/Given Namos KENTH ANGELOU Kasarian/Sex MALE Araw ng Kapanganakan/Date of Birth JU...",
+              "candidateRequirements": [
+                {
+                  "requirement": "applicationForm",
+                  "name": "Application Form",
+                  "confidence": 0.6
+                }
+              ]
+            }
+          ]
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1A_7GlObhV3hpqCVn_zhZPegPE0xm73SO",
+              "name": "J. Authority to Use Land or Property.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 15805,
+              "webViewLink": "https://docs.google.com/document/d/1A_7GlObhV3hpqCVn_zhZPegPE0xm73SO/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'authority to use land or property'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land",
+                "authority to use land or property"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "14qLEjxqWmInD15kT2YkEPYXGYZecHFH-",
+              "name": "C. Individual Affidavit of New Business (1).docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 14212,
+              "webViewLink": "https://docs.google.com/document/d/14qLEjxqWmInD15kT2YkEPYXGYZecHFH-/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1Wk2Nq73XmEyc8yUPOU26o0VY5DmXMmSA",
+              "name": "CamScanner 29-07-2026 19.25.jpg",
+              "mimeType": "image/jpeg",
+              "size": 2801823,
+              "webViewLink": "https://drive.google.com/file/d/1Wk2Nq73XmEyc8yUPOU26o0VY5DmXMmSA/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.85,
+              "reason": "OCR content matches 'certificate of residency'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 1224,
+              "detectionMethod": "OCR_CONTENT",
+              "detectedKeywords": [
+                "proof of residency",
+                "barangay certificate",
+                "certificate of residency"
+              ],
+              "snippet": "Republic of the Philippines Province of Agusan Del Sur Municipality of Trento BARANGAY STA. MARIA OFFICE OF THE PUNONG BARANGAY CERTIFICATE OF RESIDENCY To Whom It May Concern: THIS IS TO CERTIFY that KENTH ANGELOU M. REBUCAS, of legal age, Filipino ...",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1Au0It6uxvDeeh-g6Kd3iXWkccsbJ7GHL",
+              "name": "CamScanner 29-07-2026 19.28.jpg",
+              "mimeType": "image/jpeg",
+              "size": 3579823,
+              "webViewLink": "https://drive.google.com/file/d/1Au0It6uxvDeeh-g6Kd3iXWkccsbJ7GHL/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.85,
+              "reason": "OCR content matches 'endorsement'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 1512,
+              "detectionMethod": "OCR_CONTENT",
+              "detectedKeywords": [
+                "municipal agriculturist",
+                "endorsement letter",
+                "agriculture office",
+                "municipal agriculture office",
+                "endorsement"
+              ],
+              "snippet": "Ot the Office of the Municipal Agriculture ENDORSEMENT LETTER July 17, 2026 ENGR. RICARDO M. ONATE, JR. Executive Regional Director Department of Agriculture-RFO 13 Butuan City Greetings! Ille Municipal Agriculture Office (MAO) of the Local Governmen...",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1g4M6TwzX39ja69k1jvMtitAAf-9GTgys",
+              "name": "I. Declaration of Intent.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 13195,
+              "webViewLink": "https://docs.google.com/document/d/1g4M6TwzX39ja69k1jvMtitAAf-9GTgys/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "declarationOfIntent",
+              "confidence": 0.75,
+              "reason": "Filename matches 'declaration of intent'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "declaration of intent"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "randl-banana-crunch-",
+      "name": "R&L Banana Crunch ",
+      "driveFolderId": "1huIbo8-salU19W7ShFtvaSDAMwnrKlUM",
+      "driveUrl": "https://drive.google.com/drive/folders/1huIbo8-salU19W7ShFtvaSDAMwnrKlUM",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 18.2,
+      "status": "INCOMPLETE",
+      "applicableRequirementsCount": 11,
+      "completeCount": 2,
+      "missingCount": 9,
+      "needsReviewCount": 0,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1XB1Ap7vYoiGCOC3bMzF7YzP4LJ5aLvH4",
+              "name": "A.-StartUp-Individual-Application-Letter - Copy.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 18448,
+              "webViewLink": "https://docs.google.com/document/d/1XB1Ap7vYoiGCOC3bMzF7YzP4LJ5aLvH4/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "businessModelCanvas": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "17u8VDwEmLHY_B81wxf7CMDe7hwLX_92n",
+              "name": "BMC-Leonor-Perez-Jr.-RL-Banana-Crunch (2) - Copy.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 276662,
+              "webViewLink": "https://docs.google.com/document/d/17u8VDwEmLHY_B81wxf7CMDe7hwLX_92n/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.75,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "proofOfResidency": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "rdb's-heartland-farm",
+      "name": "RDB'S Heartland Farm",
+      "driveFolderId": "1UnhjAWBYYy5NdXzEC_O5Ji4UjBTUJc7B",
+      "driveUrl": "https://drive.google.com/drive/folders/1UnhjAWBYYy5NdXzEC_O5Ji4UjBTUJc7B",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 0.0,
+      "status": "INCOMPLETE",
+      "applicableRequirementsCount": 11,
+      "completeCount": 0,
+      "missingCount": 11,
+      "needsReviewCount": 0,
+      "requirements": {
+        "applicationLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "applicationForm": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "businessModelCanvas": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "proofOfResidency": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "royal-breed-genetic",
+      "name": "Royal Breed Genetic",
+      "driveFolderId": "1L1eQL38zseLFwZ5NXwyOlDpsd3plpHFX",
+      "driveUrl": "https://drive.google.com/drive/folders/1L1eQL38zseLFwZ5NXwyOlDpsd3plpHFX",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 0.0,
+      "status": "INCOMPLETE",
+      "applicableRequirementsCount": 11,
+      "completeCount": 0,
+      "missingCount": 11,
+      "needsReviewCount": 0,
+      "requirements": {
+        "applicationLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "applicationForm": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "businessModelCanvas": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "bmcFinancials": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "proofOfResidency": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "wormtastik-",
+      "name": "WormTastik ",
+      "driveFolderId": "109NQnDxU2pCTw3ZtAjx85vn7lrLye8Fs",
+      "driveUrl": "https://drive.google.com/drive/folders/109NQnDxU2pCTw3ZtAjx85vn7lrLye8Fs",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 27.3,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 3,
+      "missingCount": 7,
+      "needsReviewCount": 1,
+      "requirements": {
+        "applicationLetter": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1KHh-jsh6TDhrRyN2iN4uWqZBnRlNIRgW",
+              "name": "A.-StartUp-Individual-Application-Letter.pdf",
+              "mimeType": "application/pdf",
+              "size": 218540,
+              "webViewLink": "https://drive.google.com/file/d/1KHh-jsh6TDhrRyN2iN4uWqZBnRlNIRgW/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1teMqJoEwGTR6k6-N406NXscqThbKf186",
+              "name": "B.-Application-Form-Start-Up.pdf",
+              "mimeType": "application/pdf",
+              "size": 300600,
+              "webViewLink": "https://drive.google.com/file/d/1teMqJoEwGTR6k6-N406NXscqThbKf186/view?usp=drivesdk",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1dP0io1T6ipOIxmHovLKWOOF2Pm-PpqYw",
+              "name": "BMC.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 171877,
+              "webViewLink": "https://docs.google.com/document/d/1dP0io1T6ipOIxmHovLKWOOF2Pm-PpqYw/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.75,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1fi4OWGY9Sx9ov0CKl8xSpxa3HkzU1zSx",
+              "name": "WormTastik-YFC-BMC-Financials-New-Plan-Updated.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 221861,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1fi4OWGY9Sx9ov0CKl8xSpxa3HkzU1zSx/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.8,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                }
+              ]
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1fi4OWGY9Sx9ov0CKl8xSpxa3HkzU1zSx",
+              "name": "WormTastik-YFC-BMC-Financials-New-Plan-Updated.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 221861,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1fi4OWGY9Sx9ov0CKl8xSpxa3HkzU1zSx/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "bmcFinancials",
+              "confidence": 0.85,
+              "reason": "Filename matches 'bmc financials'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc financial",
+                "bmc financials",
+                "yfc bmc financials"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                }
+              ]
+            }
+          ]
+        },
+        "financialFigures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "proofOfResidency": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "endorsementLetter": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    },
+    {
+      "id": "yolkytolk",
+      "name": "YOLKYTOLK",
+      "driveFolderId": "1B72DGMtXPeMyjnReEKjdZWIP8hIADzvg",
+      "driveUrl": "https://drive.google.com/drive/folders/1B72DGMtXPeMyjnReEKjdZWIP8hIADzvg",
+      "applicantType": "INDIVIDUAL",
+      "completionRate": 27.3,
+      "status": "NEEDS_REVIEW",
+      "applicableRequirementsCount": 11,
+      "completeCount": 3,
+      "missingCount": 3,
+      "needsReviewCount": 5,
+      "requirements": {
+        "applicationLetter": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1JuHSAGlFnhVJc3L1LlGl4eoA6XelJGrL",
+              "name": "endorsment .jpg",
+              "mimeType": "image/jpeg",
+              "size": 2069194,
+              "webViewLink": "https://drive.google.com/file/d/1JuHSAGlFnhVJc3L1LlGl4eoA6XelJGrL/view?usp=drivesdk",
+              "requirement": "applicationLetter",
+              "confidence": 0.6,
+              "reason": "OCR content matches 'dear sir'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 794,
+              "detectionMethod": "OCR_CONTENT",
+              "detectedKeywords": [
+                "dear sir"
+              ],
+              "snippet": "Republic of the Philippines Province of Agusan del Sur BAYUGAN CITY CITY VETERINARY OFFICE Lope A. Asis Memorial Gymnasium, Poblacion, Bayugan City E-mail: cvet.bayugan 18@gmail.com ENDORSEMENT July 31, 2026 ENGR. RICARDO M. ONATE JR. Regional Execut...",
+              "candidateRequirements": [
+                {
+                  "requirement": "applicationLetter",
+                  "name": "Application Letter",
+                  "confidence": 0.6
+                }
+              ]
+            },
+            {
+              "fileId": "1INxpO1l-yrFZ8JGRGxW_4Llq4_fThwSK",
+              "name": "A.-StartUp-Individual-Application-Letter.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 12694,
+              "webViewLink": "https://docs.google.com/document/d/1INxpO1l-yrFZ8JGRGxW_4Llq4_fThwSK/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationLetter",
+              "confidence": 0.75,
+              "reason": "Filename matches 'application letter'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application letter"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "applicationForm": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1X5MUG_xFcnKZ-jygU9083x2iA_tcpB-7",
+              "name": "B.-Application-Form-Start-Up.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 703007,
+              "webViewLink": "https://docs.google.com/document/d/1X5MUG_xFcnKZ-jygU9083x2iA_tcpB-7/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "applicationForm",
+              "confidence": 0.9,
+              "reason": "Filename matches 'application form'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "application form",
+                "b application form start up"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "businessModelCanvas": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1l9PWNxarLjadGrkdZgva2yTt-nFiq8jQ",
+              "name": "D.-YFC-BMC-Financials-Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 168189,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1l9PWNxarLjadGrkdZgva2yTt-nFiq8jQ/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.8,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            },
+            {
+              "fileId": "1ARkLEq21eUGJkUC-9_INsnlUgSfqbhSG",
+              "name": "D.-YFC-BMC-TEMPLATE FINAL.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 552890,
+              "webViewLink": "https://docs.google.com/document/d/1ARkLEq21eUGJkUC-9_INsnlUgSfqbhSG/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "businessModelCanvas",
+              "confidence": 0.9,
+              "reason": "Filename matches 'bmc'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc",
+                "bmc template",
+                "yfc bmc"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "bmcFinancials": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1l9PWNxarLjadGrkdZgva2yTt-nFiq8jQ",
+              "name": "D.-YFC-BMC-Financials-Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 168189,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1l9PWNxarLjadGrkdZgva2yTt-nFiq8jQ/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "bmcFinancials",
+              "confidence": 0.85,
+              "reason": "Filename matches 'bmc financials'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "bmc financials template",
+                "bmc financial",
+                "yfc bmc financials",
+                "d yfc bmc financials template",
+                "bmc financials"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "financialFigures": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1l9PWNxarLjadGrkdZgva2yTt-nFiq8jQ",
+              "name": "D.-YFC-BMC-Financials-Template.xlsx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "size": 168189,
+              "webViewLink": "https://docs.google.com/spreadsheets/d/1l9PWNxarLjadGrkdZgva2yTt-nFiq8jQ/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "financialFigures",
+              "confidence": 0.7,
+              "reason": "Filename matches 'financials template'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "financials template"
+              ],
+              "snippet": "",
+              "candidateRequirements": [
+                {
+                  "requirement": "businessModelCanvas",
+                  "name": "Business Model Canvas (BMC)",
+                  "confidence": 0.8
+                },
+                {
+                  "requirement": "financialFigures",
+                  "name": "Financial Figures / Expenses",
+                  "confidence": 0.7
+                }
+              ]
+            }
+          ]
+        },
+        "validId": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "swornStatement": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1CF7GEk5USjHccsmvym_A2BgoMeJ2QPB_",
+              "name": "C.-Individual-Affidavit-of-New-Business.docx",
+              "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "size": 336464,
+              "webViewLink": "https://docs.google.com/document/d/1CF7GEk5USjHccsmvym_A2BgoMeJ2QPB_/edit?usp=drivesdk&ouid=111274441004026421249&rtpof=true&sd=true",
+              "requirement": "swornStatement",
+              "confidence": 0.9,
+              "reason": "Filename matches 'affidavit'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "affidavit of new business",
+                "affidavit"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            },
+            {
+              "fileId": "1orfxfS4y3B1FhsZWbG9u-0seBYeZtJhF",
+              "name": "authority to use land.jpg",
+              "mimeType": "image/jpeg",
+              "size": 3365541,
+              "webViewLink": "https://drive.google.com/file/d/1orfxfS4y3B1FhsZWbG9u-0seBYeZtJhF/view?usp=drivesdk",
+              "requirement": "swornStatement",
+              "confidence": 0.7,
+              "reason": "Filename matches 'authority to use land'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 12,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "authority to use land"
+              ],
+              "snippet": "-2 d o d o o",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "proofOfResidency": {
+          "status": "COMPLETE",
+          "automatedStatus": "COMPLETE",
+          "files": [
+            {
+              "fileId": "1tbz6B_HJOPVaxGPvqkGGRpylUzhbK6ro",
+              "name": "RESIDENCY ",
+              "mimeType": "image/jpeg",
+              "size": 2810197,
+              "webViewLink": "https://drive.google.com/file/d/1tbz6B_HJOPVaxGPvqkGGRpylUzhbK6ro/view?usp=drivesdk",
+              "requirement": "proofOfResidency",
+              "confidence": 0.7,
+              "reason": "Filename matches 'residency'",
+              "ocrAttempted": false,
+              "ocrStatus": "NOT_REQUIRED",
+              "ocrCharacterCount": 0,
+              "detectionMethod": "FILENAME_ONLY",
+              "detectedKeywords": [
+                "residency"
+              ],
+              "snippet": "",
+              "candidateRequirements": []
+            }
+          ]
+        },
+        "endorsementLetter": {
+          "status": "NEEDS_REVIEW",
+          "automatedStatus": "NEEDS_REVIEW",
+          "files": [
+            {
+              "fileId": "1JuHSAGlFnhVJc3L1LlGl4eoA6XelJGrL",
+              "name": "endorsment .jpg",
+              "mimeType": "image/jpeg",
+              "size": 2069194,
+              "webViewLink": "https://drive.google.com/file/d/1JuHSAGlFnhVJc3L1LlGl4eoA6XelJGrL/view?usp=drivesdk",
+              "requirement": "endorsementLetter",
+              "confidence": 0.99,
+              "reason": "Filename matches 'endorsment'; OCR content matches 'endorsement'",
+              "ocrAttempted": true,
+              "ocrStatus": "SUCCESS",
+              "ocrCharacterCount": 794,
+              "detectionMethod": "FILENAME_AND_OCR",
+              "detectedKeywords": [
+                "endorsment",
+                "endorsement"
+              ],
+              "snippet": "Republic of the Philippines Province of Agusan del Sur BAYUGAN CITY CITY VETERINARY OFFICE Lope A. Asis Memorial Gymnasium, Poblacion, Bayugan City E-mail: cvet.bayugan 18@gmail.com ENDORSEMENT July 31, 2026 ENGR. RICARDO M. ONATE JR. Regional Execut...",
+              "candidateRequirements": [
+                {
+                  "requirement": "applicationLetter",
+                  "name": "Application Letter",
+                  "confidence": 0.6
+                }
+              ]
+            }
+          ]
+        },
+        "photo2x2": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "signatures": {
+          "status": "MISSING",
+          "automatedStatus": "MISSING",
+          "files": []
+        },
+        "declarationOfIntent": {
+          "status": "NOT_APPLICABLE",
+          "automatedStatus": "NOT_APPLICABLE",
+          "files": []
+        }
+      }
+    }
+  ]
+}

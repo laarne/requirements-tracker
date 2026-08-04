@@ -1,0 +1,34 @@
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+service_account.json
+*.pem
+
+# Dependencies & Python Virtual Environments & Cache
+Lib/
+Include/
+Scripts/
+pyvenv.cfg
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.pytest_cache/
+
+# Temporary files & downloads
+temp_downloads/
+scratch/
+*.tmp
+temp_rec.jpg
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
