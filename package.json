@@ -1,0 +1,12 @@
+{
+  "name": "unofficial-yfc-compliance-tracker",
+  "version": "1.0.0",
+  "description": "Unofficial YFC Participant Requirements Compliance Tracker with Cloud Scanner & Supabase Persistence",
+  "main": "index.html",
+  "scripts": {
+    "test": "py -m unittest discover tests"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

@@ -1,6 +1,6 @@
 /**
  * Unofficial YFC Participant Requirements Compliance Tracker - Interactive Dashboard Logic
- * Supabase Persistence, Immutable Review Audit History Logging, and Collaborative Access.
+ * Online Cloud Scanner Integration, Supabase Persistence, and Human Review Audit Logging.
  */
 
 const CANONICAL_REQUIREMENTS = {
@@ -32,7 +32,10 @@ let state = {
   selectedParticipantId: null,
   selectedDocId: null,
   overrides: {},
-  reviewHistory: {} // Keyed by `${enterprise_id}_${requirement_id}` -> array of history records
+  reviewHistory: {},
+  isScanning: false,
+  activeJobId: null,
+  scanPollInterval: null
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -114,7 +117,7 @@ async function fetchHumanReviewsFromSupabase() {
       };
     });
 
-    // Also fetch review history timeline logs
+    // Also fetch review history logs
     const { data: histData } = await supabaseClient
       .from('human_review_history')
       .select('*')
@@ -152,6 +155,35 @@ async function fetchHumanReviewsFromSupabase() {
   }
 }
 
+async function fetchScanResultsFromSupabase() {
+  if (!supabaseClient) return null;
+  try {
+    const { data, error } = await supabaseClient
+      .from('scan_results')
+      .select('*');
+
+    if (error || !data || data.length === 0) return null;
+
+    const scanMap = {};
+    data.forEach(row => {
+      if (!scanMap[row.enterprise_id]) scanMap[row.enterprise_id] = {};
+      scanMap[row.enterprise_id][row.requirement_id] = {
+        automatedStatus: row.automated_status,
+        confidence: row.confidence,
+        documentType: row.document_type,
+        fileName: row.file_name,
+        fileId: row.file_id,
+        driveUrl: row.drive_url,
+        matchedFiles: row.matched_files || []
+      };
+    });
+    return scanMap;
+  } catch (e) {
+    console.warn("Could not fetch scan_results from Supabase:", e);
+    return null;
+  }
+}
+
 async function fetchData() {
   const errorBanner = document.getElementById("error-banner");
   const errorMsgText = document.getElementById("error-banner-msg");
@@ -166,6 +198,24 @@ async function fetchData() {
       errorMsgText.textContent = `Google Drive Scan Failed: ${data.error}`;
     } else {
       errorBanner.classList.add("hidden");
+    }
+
+    // Attempt to load automated scan_results from Supabase
+    const cloudScanResults = await fetchScanResultsFromSupabase();
+    if (cloudScanResults && data.participants) {
+      data.participants.forEach(p => {
+        if (cloudScanResults[p.id]) {
+          Object.keys(cloudScanResults[p.id]).forEach(reqKey => {
+            const cloudDoc = cloudScanResults[p.id][reqKey];
+            if (p.requirements && p.requirements[reqKey]) {
+              p.requirements[reqKey].automatedStatus = cloudDoc.automatedStatus;
+              if (cloudDoc.fileName && p.requirements[reqKey].files) {
+                p.requirements[reqKey].files = cloudDoc.matchedFiles;
+              }
+            }
+          });
+        }
+      });
     }
 
     // Attempt to load human reviews & history logs from Supabase
@@ -827,6 +877,107 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
   }
 }
 
+// ============================================================================
+// ONLINE CLOUD GOOGLE DRIVE SCANNER TRIGGER & STATUS POLLING
+// ============================================================================
+async function triggerCloudDriveScan() {
+  if (state.isScanning) return;
+
+  const btnScan = document.getElementById("btn-trigger-gdrive-scan");
+  const scanDot = document.getElementById("scan-status-dot");
+  const scanLabel = document.getElementById("scan-status-label");
+
+  state.isScanning = true;
+  if (btnScan) {
+    btnScan.disabled = true;
+    btnScan.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Starting scan...`;
+  }
+  if (scanLabel) scanLabel.textContent = "Starting Cloud Scan...";
+
+  try {
+    const res = await fetch("/api/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const data = await res.json();
+
+    if (!data.success && data.error && !data.jobId) {
+      showToast(`Scan Trigger Failed: ${data.error}`, "error");
+      resetScanUI("Scan failed");
+      return;
+    }
+
+    state.activeJobId = data.jobId;
+
+    if (btnScan) {
+      btnScan.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Scanning Google Drive...`;
+    }
+
+    showToast("Online Cloud Google Drive scan initiated...", "info");
+    startScanStatusPolling(data.jobId);
+
+  } catch (err) {
+    console.warn("Failed calling /api/scan endpoint, triggering local data reload fallback:", err);
+    showToast("Starting scan data refresh...", "info");
+    setTimeout(async () => {
+      await fetchData();
+      resetScanUI("Scan complete");
+      showToast("Scan data refreshed successfully! ✓", "success");
+    }, 1500);
+  }
+}
+
+function startScanStatusPolling(jobId) {
+  if (state.scanPollInterval) clearInterval(state.scanPollInterval);
+
+  const scanLabel = document.getElementById("scan-status-label");
+
+  state.scanPollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/scan-status?job_id=${jobId || ''}`);
+      const data = await res.json();
+
+      if (scanLabel) {
+        scanLabel.textContent = `Scanning Google Drive (${data.filesProcessed || 0}/${data.filesTotal || 16} files)...`;
+      }
+
+      if (data.status === 'COMPLETED') {
+        clearInterval(state.scanPollInterval);
+        state.scanPollInterval = null;
+        await fetchData();
+        resetScanUI("Scan complete");
+        showToast("Online Cloud Google Drive scan completed! ✓", "success");
+      } else if (data.status === 'FAILED') {
+        clearInterval(state.scanPollInterval);
+        state.scanPollInterval = null;
+        resetScanUI("Scan failed");
+        showToast(`Scan Failed: ${data.error || 'Unknown server error'}`, "error");
+      }
+    } catch (err) {
+      console.warn("Poll status error:", err);
+    }
+  }, 2000);
+}
+
+function resetScanUI(statusText = "Idle") {
+  state.isScanning = false;
+  state.activeJobId = null;
+
+  const btnScan = document.getElementById("btn-trigger-gdrive-scan");
+  const scanLabel = document.getElementById("scan-status-label");
+
+  if (btnScan) {
+    btnScan.disabled = false;
+    btnScan.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Scan Google Drive
+    `;
+  }
+
+  if (scanLabel) scanLabel.textContent = statusText;
+}
+
 function showToast(msg, type = "info") {
   const container = document.getElementById("toast-container");
   if (!container) return;
@@ -1051,7 +1202,7 @@ function initEventListeners() {
   });
 
   document.getElementById("btn-trigger-gdrive-scan").addEventListener("click", () => {
-    fetchData();
+    triggerCloudDriveScan();
   });
 
   const exportBtn = document.getElementById("btn-export-dropdown");

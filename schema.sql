@@ -2,6 +2,8 @@
 -- Supabase Schema for Unofficial YFC Participant Requirements Tracker
 -- 1. public.human_reviews: Current/latest decision per enterprise + requirement.
 -- 2. public.human_review_history: Immutable audit log of every review action.
+-- 3. public.scan_results: Automated Google Drive scanner outputs.
+-- 4. public.scan_jobs: Online scan job status tracking for dashboard UI polling.
 -- ============================================================================
 
 -- Table 1: Current/Latest Human Review Decisions
@@ -49,12 +51,54 @@ ALTER TABLE public.human_review_history ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow public read history" ON public.human_review_history;
 DROP POLICY IF EXISTS "Allow public insert history" ON public.human_review_history;
 
--- RLS Policy: Anyone can SELECT (read) review history
 CREATE POLICY "Allow public read history" ON public.human_review_history FOR SELECT USING (true);
-
--- RLS Policy: Anyone can INSERT new review history entries
 CREATE POLICY "Allow public insert history" ON public.human_review_history FOR INSERT WITH CHECK (true);
 
--- Note: UPDATE and DELETE policies are intentionally omitted for human_review_history.
--- In Supabase RLS, omitting UPDATE/DELETE policies guarantees that attempts to UPDATE or DELETE
--- existing history records via the API are rejected by PostgreSQL!
+
+-- Table 3: Automated Scan Results
+CREATE TABLE IF NOT EXISTS public.scan_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enterprise_id TEXT NOT NULL,
+    requirement_id TEXT NOT NULL,
+    file_id TEXT,
+    file_name TEXT,
+    automated_status TEXT NOT NULL,
+    confidence NUMERIC DEFAULT 0.0,
+    document_type TEXT,
+    drive_url TEXT,
+    matched_files JSONB DEFAULT '[]'::jsonb,
+    scanned_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    CONSTRAINT unique_scan_enterprise_req UNIQUE (enterprise_id, requirement_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scan_results_enterprise ON public.scan_results(enterprise_id);
+ALTER TABLE public.scan_results ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read scan results" ON public.scan_results;
+DROP POLICY IF EXISTS "Allow public write scan results" ON public.scan_results;
+
+CREATE POLICY "Allow public read scan results" ON public.scan_results FOR SELECT USING (true);
+CREATE POLICY "Allow public write scan results" ON public.scan_results FOR ALL USING (true) WITH CHECK (true);
+
+
+-- Table 4: Online Scan Jobs (Status Tracking for Polling)
+CREATE TABLE IF NOT EXISTS public.scan_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    status TEXT NOT NULL DEFAULT 'QUEUED', -- QUEUED, RUNNING, COMPLETED, FAILED
+    started_at TIMESTAMPTZ DEFAULT now(),
+    completed_at TIMESTAMPTZ,
+    files_processed INTEGER DEFAULT 0,
+    files_total INTEGER DEFAULT 0,
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON public.scan_jobs(status, created_at);
+ALTER TABLE public.scan_jobs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read scan jobs" ON public.scan_jobs;
+DROP POLICY IF EXISTS "Allow public write scan jobs" ON public.scan_jobs;
+
+CREATE POLICY "Allow public read scan jobs" ON public.scan_jobs FOR SELECT USING (true);
+CREATE POLICY "Allow public write scan jobs" ON public.scan_jobs FOR ALL USING (true) WITH CHECK (true);

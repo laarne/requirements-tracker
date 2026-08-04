@@ -1,96 +1,66 @@
-# Vercel Deployment & Supabase Setup Guide
+# Vercel Deployment & Online Cloud Scanner Guide
 
-This guide explains how to deploy the **Unofficial YFC Participant Requirements Compliance Tracker** to **Vercel** with permanent human review persistence powered by **Supabase**.
+This guide details how to deploy the **Unofficial YFC Compliance Tracker** with **Online Cloud Google Drive Scanning** to Vercel.
 
 ---
 
-## 1. Architecture Overview
+## 1. Vercel Environment Variables Configuration
+
+Configure the following environment variables in your **Vercel Project Settings → Environment Variables**:
+
+| Variable Name | Required | Description | Example / Location |
+|---|---|---|---|
+| `SUPABASE_URL` | **Yes** | Your Supabase project REST URL | `https://gndnmbdzfoamtgjkvnyr.supabase.co` |
+| `SUPABASE_ANON_KEY` | **Yes** | Supabase publishable anon key | `sb_publishable_zojIDwrTmNXHQLWuOhm7yQ_2pIvgypM` |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret key (Server-only) | From Supabase Dashboard → Settings → API |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | **Optional** | Full JSON string of Google Service Account credentials for GDrive API scanning | JSON string from Google Cloud Console |
+| `GOOGLE_DRIVE_ROOT_FOLDER_ID` | **Yes** | Master GDrive folder ID | `12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y` |
+| `SCAN_SECRET` | **Optional** | Secret token to protect `/api/scan` endpoint | Custom secure string |
+
+> [!CAUTION]
+> **NEVER expose `SUPABASE_SERVICE_ROLE_KEY` or `GOOGLE_SERVICE_ACCOUNT_JSON` to client-side code.**
+> They are strictly accessed inside Vercel serverless functions (`api/scan.js` and `api/scan-status.js`).
+
+---
+
+## 2. Google Service Account Setup (For Online Cloud Scan)
+
+To allow the cloud scanner to access shared Google Drive folders without needing your laptop or browser OAuth popups:
+
+1. Open **[Google Cloud Console](https://console.cloud.google.com/)**.
+2. Enable **Google Drive API**.
+3. Create a **Service Account** and generate a **JSON key file**.
+4. Share the Master Google Drive Folder (`12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y`) with the Service Account email address (`...@...iam.gserviceaccount.com`).
+5. Copy the contents of the JSON key file into Vercel environment variable `GOOGLE_SERVICE_ACCOUNT_JSON`.
+
+---
+
+## 3. Database Schema
+
+The database relies on 4 Supabase tables in `public` schema:
+
+1. `public.human_reviews`: Stores current human reviewer decisions.
+2. `public.human_review_history`: Immutable log of all review actions (UPDATE/DELETE blocked by RLS).
+3. `public.scan_results`: Automated scanner outputs per enterprise & requirement (`UNIQUE (enterprise_id, requirement_id)`).
+4. `public.scan_jobs`: Status tracking (`QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`) for UI status polling.
+
+To apply or update the database schema, run `schema.sql` against your Supabase database.
+
+---
+
+## 4. End-to-End Online Scan Flow
 
 ```text
-                  GOOGLE DRIVE (Master Folder: 12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y)
-                                      │
-                                      ▼
-                        scanner.py (Local Laptop execution)
-                                      │
-                                      ▼
-                        OCR + Document Classification
-                                      │
-                                      ▼
-                                  data.json
-                                      │
-                                      ▼
-                             VERCEL (Public Dashboard)
-                                      │
-                                      ▼
-                             SUPABASE (Human Reviews)
+Browser Dashboard
+    ↓ Click "Scan Google Drive"
+POST /api/scan (Vercel Serverless Function)
+    ↓ Creates job in scan_jobs (status: RUNNING)
+Google Drive API / Master Folder Scan
+    ↓ Analyzes files & documents
+Upserts to public.scan_results
+    ↓ Updates scan_jobs (status: COMPLETED)
+Browser Polls GET /api/scan-status
+    ↓ Receives status: COMPLETED
+Dashboard Auto-Refreshes
+    └── Merges scan_results + human_reviews + human_review_history
 ```
-
-- **Local Laptop**: `scanner.py` runs locally whenever you choose to scan Google Drive. Your laptop does **NOT** need to stay online for colleagues to review documents.
-- **Vercel**: Hosts the static web dashboard (`index.html`, `style.css`, `app.js`, `data.json`).
-- **Supabase**: Permanently stores human review decisions (`APPROVED`, `REJECTED`, `MISSING`, `NEEDS_REVIEW`), reviewer notes, and timestamps. New scans on your laptop will **NEVER** overwrite existing human decisions in Supabase.
-
----
-
-## 2. Step 1: Supabase Database Setup
-
-1. Log into your [Supabase Dashboard](https://supabase.com/dashboard).
-2. Open the **SQL Editor** tab in your project.
-3. Paste the contents of `schema.sql` (found in this repository) and click **Run**:
-
-```sql
-CREATE TABLE IF NOT EXISTS public.human_reviews (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    enterprise_id TEXT NOT NULL,
-    requirement_id TEXT NOT NULL,
-    file_id TEXT,
-    automated_status TEXT,
-    human_status TEXT NOT NULL,
-    reviewer_name TEXT DEFAULT 'Operational Reviewer',
-    reviewer_notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
-    CONSTRAINT unique_enterprise_requirement UNIQUE (enterprise_id, requirement_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_human_reviews_enterprise ON public.human_reviews(enterprise_id);
-ALTER TABLE public.human_reviews ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public read access" ON public.human_reviews FOR SELECT USING (true);
-CREATE POLICY "Allow public write access" ON public.human_reviews FOR ALL USING (true) WITH CHECK (true);
-```
-
-4. Go to **Project Settings → API** and copy:
-   - **Project URL** (e.g. `https://xyzcompany.supabase.co`)
-   - **Anon / Public Key** (e.g. `eyJhbGci...`)
-
----
-
-## 3. Step 2: Vercel Environment Variables & Deployment
-
-1. Push your repository to GitHub (`https://github.com/laarne/requirements-tracker`).
-2. Log into [Vercel](https://vercel.com) and click **Add New → Project**.
-3. Import your GitHub repository (`laarne/requirements-tracker`).
-4. Under **Environment Variables**, add:
-
-| Key | Value | Description |
-|---|---|---|
-| `SUPABASE_URL` | `https://xyzcompany.supabase.co` | Your Supabase Project URL |
-| `SUPABASE_ANON_KEY` | `eyJhbGci...` | Your Supabase Anon/Public Key |
-
-5. Click **Deploy**.
-
----
-
-## 4. Step 3: Configuring Local Environment (Optional)
-
-To test Supabase sync locally on your laptop:
-1. Create a script or embed `window.SUPABASE_URL` and `window.SUPABASE_ANON_KEY` in `index.html` or `.env`.
-2. When configured, the header status badge will display **`● Supabase Synced`** in green!
-
----
-
-## 5. Security Checklist
-
-- [x] `.gitignore` excludes `credentials.json`, `token.json`, `.env`, and private key files.
-- [x] Only the public `SUPABASE_ANON_KEY` is passed to the frontend browser; the `service_role` key is **NEVER** exposed.
-- [x] Row Level Security (RLS) is enabled on the `human_reviews` table.
