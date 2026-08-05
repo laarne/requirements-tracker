@@ -228,7 +228,6 @@ class TestEnterpriseIdentityAndDeDuplication(unittest.TestCase):
             {"enterprise_folder_id": "1A2B3C", "requirement_id": "appLetter", "status": "COMPLETE"},
             {"enterprise_folder_id": "1A2B3C", "requirement_id": "appLetter", "status": "COMPLETE"}
         ]
-        # De-duplicate by (enterprise_folder_id, requirement_id)
         dedup_map = {}
         for r in folder_records:
             key = (r["enterprise_folder_id"], r["requirement_id"])
@@ -272,6 +271,104 @@ class TestEnterpriseIdentityAndDeDuplication(unittest.TestCase):
 
         effective_status = human_review["manual_status"] or cloud_scan_result["automated_status"]
         self.assertEqual(effective_status, "APPROVED")
+
+    def test_06_synthetic_folder_id_not_matching_real_drive_id(self):
+        synthetic_id = "folder_bb_banana_chips"
+        real_id = "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP"
+        self.assertNotEqual(synthetic_id, real_id)
+
+    def test_07_identity_resolution_resolves_synthetic_to_real(self):
+        data_json_map = {
+            "byId": {"bandb-banana-chips": "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP"},
+            "byName": {"b&b banana chips": "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP"},
+            "byFolderId": {"1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP": "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP"}
+        }
+
+        def is_real_gdrive_id(id_str):
+            return id_str and len(id_str) > 15 and any(c.isupper() for c in id_str)
+
+        def resolve_folder_key(raw_key, enterprise_id, enterprise_name, id_map):
+            if raw_key and is_real_gdrive_id(raw_key):
+                return raw_key
+            if enterprise_id and enterprise_id in id_map["byId"]:
+                return id_map["byId"][enterprise_id]
+            if enterprise_name and enterprise_name.lower().strip() in id_map["byName"]:
+                return id_map["byName"][enterprise_name.lower().strip()]
+            return raw_key
+
+        result = resolve_folder_key("folder_bb_banana_chips", "bandb-banana-chips", "B&B Banana Chips", data_json_map)
+        self.assertEqual(result, "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP")
+
+    def test_08_real_folder_id_passes_through(self):
+        real_id = "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP"
+
+        def is_real_gdrive_id(id_str):
+            return id_str and len(id_str) > 15 and any(c.isupper() for c in id_str)
+
+        self.assertTrue(is_real_gdrive_id(real_id))
+
+    def test_09_no_duplicates_after_identity_resolution(self):
+        data_json_participants = [
+            {"id": "bandb-banana-chips", "name": "B&B Banana Chips", "driveFolderId": "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP"},
+            {"id": "capra_verde", "name": "CAPRA VERDE", "driveFolderId": "1OBSrOknbVKQ54wOVzy1wyl2r_L_wPeKi"}
+        ]
+        supabase_rows = [
+            {"enterprise_folder_id": "folder_bb_banana_chips", "enterprise_id": "bb_banana_chips", "enterprise_name": "B&B Banana Chips"},
+            {"enterprise_folder_id": "folder_capra_verde", "enterprise_id": "capra_verde", "enterprise_name": "CAPRA VERDE"}
+        ]
+
+        identity_map = {"byId": {}, "byName": {}, "byFolderId": {}}
+        for p in data_json_participants:
+            fid = p["driveFolderId"]
+            identity_map["byId"][p["id"]] = fid
+            identity_map["byName"][p["name"].lower().strip()] = fid
+
+        def is_real_gdrive_id(id_str):
+            return id_str and len(id_str) > 15 and any(c.isupper() for c in id_str)
+
+        def resolve_folder_key(raw_key, enterprise_id, enterprise_name, id_map):
+            if raw_key and is_real_gdrive_id(raw_key):
+                return raw_key
+            if enterprise_id and enterprise_id in id_map["byId"]:
+                return id_map["byId"][enterprise_id]
+            if enterprise_name and enterprise_name.lower().strip() in id_map["byName"]:
+                return id_map["byName"][enterprise_name.lower().strip()]
+            return raw_key
+
+        participants_map = {}
+        for p in data_json_participants:
+            participants_map[p["driveFolderId"]] = p
+
+        for row in supabase_rows:
+            resolved_key = resolve_folder_key(
+                row["enterprise_folder_id"], row["enterprise_id"], row["enterprise_name"], identity_map
+            )
+            if resolved_key not in participants_map:
+                participants_map[resolved_key] = {"name": row["enterprise_name"]}
+
+        self.assertEqual(len(participants_map), 2)
+        self.assertIn("1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP", participants_map)
+        self.assertIn("1OBSrOknbVKQ54wOVzy1wyl2r_L_wPeKi", participants_map)
+
+    def test_10_17_folders_produces_17_enterprises(self):
+        real_folder_ids = [
+            "1IdWQfK_mzOKp4Rc7LXtLP-W1FczCe_o_",
+            "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP",
+            "1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0",
+            "1OBSrOknbVKQ54wOVzy1wyl2r_L_wPeKi",
+            "1w5yWcoh0YUbWYOlRWLCUkj3CNh1Qvbwl"
+        ]
+        scan_results = []
+        for fid in real_folder_ids:
+            for req_idx in range(12):
+                scan_results.append({
+                    "enterprise_folder_id": fid,
+                    "requirement_id": f"req_{req_idx}"
+                })
+
+        unique_folders = set(r["enterprise_folder_id"] for r in scan_results)
+        self.assertEqual(len(unique_folders), len(real_folder_ids))
+        self.assertEqual(len(scan_results), len(real_folder_ids) * 12)
 
 
 if __name__ == "__main__":

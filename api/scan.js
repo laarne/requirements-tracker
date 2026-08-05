@@ -116,8 +116,14 @@ module.exports = async (req, res) => {
     let filesProcessed = 0;
     let resultsSaved = 0;
     let newEnterprisesCount = 0;
-    let duplicateRecordsConsolidated = 0;
+    let duplicateRecordsRemoved = 0;
+    let legacyRecordsReconciled = 0;
     let possibleDuplicatesCount = 0;
+    let staleRecordsArchived = 0;
+    let humanReviewsPreservedCount = 0;
+
+    // Load data.json identity map for resolving legacy/synthetic folder IDs
+    const dataJsonMap = loadDataJsonFolderIdMap();
 
     let scannedParticipants = [];
 
@@ -146,7 +152,7 @@ module.exports = async (req, res) => {
         }
       });
 
-      // Get existing enterprises from Supabase scan_results to detect new ones
+      // Get existing scan_results to check for new enterprises & legacy records
       const { data: existingScanData } = await supabase.from('scan_results').select('enterprise_folder_id, enterprise_id');
       const existingFolderIds = new Set((existingScanData || []).map(r => r.enterprise_folder_id || r.enterprise_id));
 
@@ -175,7 +181,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Fallback: If Google Drive API credentials are not set in environment or GDrive API returned 0 folders, load default enterprises & fallback data
+    // Fallback: If Google Drive API credentials are unconfigured or return 0 folders, use fallback dataset with stable folder IDs
     if (scannedParticipants.length === 0) {
       console.log("Using default enterprise scanner dataset (Google Drive API unconfigured or 0 folders returned).");
       const defaultData = generateCloudDefaultScanDataset();
@@ -186,10 +192,77 @@ module.exports = async (req, res) => {
       filesProcessed = 48;
     }
 
-    // 4. Idempotent Upsert to Supabase scan_results table using UNIQUE (enterprise_folder_id, requirement_id)
+    // 4. Reconcile Legacy DB Records & Idempotent Upsert to Supabase scan_results
+    const validFolderIds = new Set(scannedParticipants.map(p => p.enterpriseFolderId));
+
+    // A. Reconcile Human Reviews to point to enterprise_folder_id
+    const { data: humanRevs } = await supabase.from('human_reviews').select('*');
+    if (humanRevs && humanRevs.length > 0) {
+      humanReviewsPreservedCount = humanRevs.length;
+      for (const rev of humanRevs) {
+        const resolvedFolderId = resolveToRealFolderId(
+          rev.enterprise_folder_id, rev.enterprise_id, null, dataJsonMap
+        );
+        if (resolvedFolderId && resolvedFolderId !== rev.enterprise_folder_id) {
+          await supabase
+            .from('human_reviews')
+            .update({ enterprise_folder_id: resolvedFolderId })
+            .eq('id', rev.id);
+          legacyRecordsReconciled++;
+        } else if (!rev.enterprise_folder_id && resolvedFolderId) {
+          await supabase
+            .from('human_reviews')
+            .update({ enterprise_folder_id: resolvedFolderId })
+            .eq('id', rev.id);
+          legacyRecordsReconciled++;
+        }
+      }
+    }
+
+    // B. Reconcile Human Review History logs
+    const { data: humanHist } = await supabase.from('human_review_history').select('*');
+    if (humanHist && humanHist.length > 0) {
+      for (const hist of humanHist) {
+        const resolvedFolderId = resolveToRealFolderId(
+          hist.enterprise_folder_id, hist.enterprise_id, null, dataJsonMap
+        );
+        if (resolvedFolderId && resolvedFolderId !== hist.enterprise_folder_id) {
+          await supabase
+            .from('human_review_history')
+            .update({ enterprise_folder_id: resolvedFolderId })
+            .eq('id', hist.id);
+        } else if (!hist.enterprise_folder_id && resolvedFolderId) {
+          await supabase
+            .from('human_review_history')
+            .update({ enterprise_folder_id: resolvedFolderId })
+            .eq('id', hist.id);
+        }
+      }
+    }
+
+    // C. Reconcile existing scan_results with synthetic/legacy folder IDs
+    const { data: existingResults } = await supabase.from('scan_results').select('id, enterprise_folder_id, enterprise_id, enterprise_name');
+    if (existingResults && existingResults.length > 0) {
+      for (const row of existingResults) {
+        if (!isRealGoogleDriveId(row.enterprise_folder_id)) {
+          const resolvedFolderId = resolveToRealFolderId(
+            row.enterprise_folder_id, row.enterprise_id, row.enterprise_name, dataJsonMap
+          );
+          if (resolvedFolderId && resolvedFolderId !== row.enterprise_folder_id) {
+            await supabase
+              .from('scan_results')
+              .update({ enterprise_folder_id: resolvedFolderId })
+              .eq('id', row.id);
+            legacyRecordsReconciled++;
+          }
+        }
+      }
+    }
+
+    // D. Upsert Current Scan Results
     const scanResultsToUpsert = [];
     scannedParticipants.forEach(p => {
-      const folderId = p.enterpriseFolderId || p.driveFolderId || p.id;
+      const folderId = p.enterpriseFolderId;
       Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
         const doc = (p.requirements && p.requirements[reqKey]) ? p.requirements[reqKey] : { status: "MISSING", files: [] };
         const topFile = doc.files && doc.files.length > 0 ? doc.files[0] : null;
@@ -222,6 +295,26 @@ module.exports = async (req, res) => {
       resultsSaved = scanResultsToUpsert.length;
     }
 
+    // D. Purge / Archive Stale scan_results rows belonging to legacy string IDs or deleted folders
+    const { data: allScanRows } = await supabase.from('scan_results').select('id, enterprise_folder_id');
+    if (allScanRows && allScanRows.length > 0) {
+      const staleRowIds = allScanRows
+        .filter(r => !validFolderIds.has(r.enterprise_folder_id))
+        .map(r => r.id);
+
+      if (staleRowIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from('scan_results')
+          .delete()
+          .in('id', staleRowIds);
+
+        if (!delErr) {
+          staleRecordsArchived = staleRowIds.length;
+          duplicateRecordsRemoved = staleRowIds.length;
+        }
+      }
+    }
+
     // 5. Update scan_jobs record with status COMPLETED and safe diagnostic metrics
     if (job) {
       await supabase
@@ -235,7 +328,7 @@ module.exports = async (req, res) => {
           files_processed: filesProcessed,
           files_total: filesProcessed,
           results_saved: resultsSaved,
-          duplicate_records_consolidated: duplicateRecordsConsolidated,
+          duplicate_records_consolidated: duplicateRecordsRemoved,
           possible_duplicates: possibleDuplicatesCount,
           new_enterprises_found: newEnterprisesCount,
           error_message: authError || null
@@ -252,9 +345,11 @@ module.exports = async (req, res) => {
       filesFound: filesFound,
       filesProcessed: filesProcessed,
       resultsSaved: resultsSaved,
-      duplicateRecordsConsolidated: duplicateRecordsConsolidated,
-      possibleDuplicates: possibleDuplicatesCount,
-      newEnterprisesFound: newEnterprisesCount,
+      duplicateRecordsRemoved: duplicateRecordsRemoved,
+      legacyRecordsReconciled: legacyRecordsReconciled,
+      possibleDuplicateNames: possibleDuplicatesCount,
+      staleRecordsArchived: staleRecordsArchived,
+      humanReviewsPreserved: humanReviewsPreservedCount,
       scannedAt: new Date().toISOString()
     });
 
@@ -360,6 +455,71 @@ function normalizeNameForComparison(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
+function isRealGoogleDriveId(id) {
+  if (!id || typeof id !== 'string') return false;
+  return id.length > 15 && /[A-Z]/.test(id);
+}
+
+const MANUAL_FOLDER_ID_MAP = {
+  'bp_squashella': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'bp-squashélla': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'bp squashélla': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'bp squashella': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'darco_rir': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+  'd-arco-rir-and-native-poultry-production': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+  'd-arco rir and native': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+  'd-arco rir and native poultry production': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+};
+
+function loadDataJsonFolderIdMap() {
+  const map = { byId: {}, byName: {}, bySlug: {}, byNormalizedId: {}, byNormalizedName: {} };
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dataPath = path.join(process.cwd(), 'data.json');
+    if (fs.existsSync(dataPath)) {
+      const dataJson = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      if (dataJson.participants) {
+        dataJson.participants.forEach(p => {
+          const folderId = p.driveFolderId || p.enterpriseFolderId;
+          if (folderId && isRealGoogleDriveId(folderId)) {
+            map.byId[p.id] = folderId;
+            map.byName[p.name.toLowerCase().trim()] = folderId;
+            if (p.driveFolderId) map.bySlug[p.driveFolderId] = folderId;
+            map.byNormalizedId[normalizeIdentityKey(p.id)] = folderId;
+            map.byNormalizedName[normalizeIdentityKey(p.name)] = folderId;
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Could not load data.json for identity resolution:", e.message);
+  }
+  return map;
+}
+
+function resolveToRealFolderId(folderId, enterpriseId, enterpriseName, dataJsonMap) {
+  if (folderId && isRealGoogleDriveId(folderId)) return folderId;
+  if (enterpriseId && MANUAL_FOLDER_ID_MAP[enterpriseId]) return MANUAL_FOLDER_ID_MAP[enterpriseId];
+  if (enterpriseName && MANUAL_FOLDER_ID_MAP[enterpriseName.toLowerCase().trim()]) {
+    return MANUAL_FOLDER_ID_MAP[enterpriseName.toLowerCase().trim()];
+  }
+  if (enterpriseId && dataJsonMap.byId[enterpriseId]) return dataJsonMap.byId[enterpriseId];
+  if (enterpriseName && dataJsonMap.byName[enterpriseName.toLowerCase().trim()]) {
+    return dataJsonMap.byName[enterpriseName.toLowerCase().trim()];
+  }
+  const normId = normalizeIdentityKey(enterpriseId);
+  if (normId && dataJsonMap.byNormalizedId[normId]) return dataJsonMap.byNormalizedId[normId];
+  const normName = normalizeIdentityKey(enterpriseName);
+  if (normName && dataJsonMap.byNormalizedName[normName]) return dataJsonMap.byNormalizedName[normName];
+  return folderId;
+}
+
+function normalizeIdentityKey(str) {
+  if (!str) return '';
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 function determineApplicantType(folderName, files) {
   const normFolder = folderName.toLowerCase();
   if (normFolder.includes("group") || normFolder.includes("association") || normFolder.includes("coop") || normFolder.includes("corp")) {
@@ -426,33 +586,63 @@ function processFilesForRequirements(files, applicantType) {
 }
 
 function generateCloudDefaultScanDataset() {
-  const DEFAULT_ENTERPRISES = [
-    { name: "AgriTurkey Farm Enterprise", id: "agriturkey", folderId: "folder_agriturkey", applicantType: "INDIVIDUAL" },
-    { name: "B&B Banana Chips", id: "bb_banana_chips", folderId: "folder_bb_banana_chips", applicantType: "INDIVIDUAL" },
-    { name: "BP SQUASHÉLLA", id: "bp_squashella", folderId: "folder_bp_squashella", applicantType: "GROUP" },
-    { name: "CAPRA VERDE", id: "capra_verde", folderId: "folder_capra_verde", applicantType: "INDIVIDUAL" },
-    { name: "Carias Piggery", id: "carias_piggery", folderId: "folder_carias_piggery", applicantType: "INDIVIDUAL" },
-    { name: "D-Arco RIR and Native", id: "darco_rir", folderId: "folder_darco_rir", applicantType: "INDIVIDUAL" },
-    { name: "EcoCrunch", id: "ecocrunch", folderId: "folder_ecocrunch", applicantType: "INDIVIDUAL" },
-    { name: "Franklins Golden Grain", id: "franklins_golden_grain", folderId: "folder_franklins_golden_grain", applicantType: "INDIVIDUAL" },
-    { name: "GILDGOAT", id: "gildgoat", folderId: "folder_gildgoat", applicantType: "INDIVIDUAL" },
-    { name: "GrowMate (Digital Agri-tech)", id: "growmate", folderId: "folder_growmate", applicantType: "GROUP" },
-    { name: "Kenths Boiler", id: "kenths_boiler", folderId: "folder_kenths_boiler", applicantType: "INDIVIDUAL" },
-    { name: "R&L Banana Crunch", id: "rl_banana_crunch", folderId: "folder_rl_banana_crunch", applicantType: "INDIVIDUAL" },
-    { name: "RDB'S Heartland Farm", id: "rdbs_heartland_farm", folderId: "folder_rdbs_heartland_farm", applicantType: "INDIVIDUAL" },
-    { name: "Royal Breed Genetic", id: "royal_breed_genetic", folderId: "folder_royal_breed_genetic", applicantType: "INDIVIDUAL" },
-    { name: "WormTastik", id: "wormtastik", folderId: "folder_wormtastik", applicantType: "INDIVIDUAL" },
-    { name: "YOLKYTOLK", id: "yolkytolk", folderId: "folder_yolkytolk", applicantType: "INDIVIDUAL" }
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dataPath = path.join(process.cwd(), 'data.json');
+    if (fs.existsSync(dataPath)) {
+      const dataJson = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      if (dataJson.participants && dataJson.participants.length > 0) {
+        console.log(`Fallback: Loaded ${dataJson.participants.length} enterprises from data.json with real Google Drive folder IDs.`);
+        return {
+          generatedAt: new Date().toISOString(),
+          source: 'data.json_fallback',
+          participants: dataJson.participants.map(p => ({
+            enterpriseFolderId: p.driveFolderId || p.id,
+            id: p.id,
+            name: p.name,
+            applicantType: p.applicantType || 'INDIVIDUAL',
+            driveUrl: p.driveUrl || `https://drive.google.com/drive/folders/${p.driveFolderId}`,
+            driveFolderId: p.driveFolderId || p.id,
+            requirements: p.requirements || {}
+          }))
+        };
+      }
+    }
+  } catch (e) {
+    console.warn("Fallback: Could not read data.json:", e.message);
+  }
+
+  console.warn("Fallback: Using hardcoded enterprise list. This should only happen when data.json is unavailable.");
+  const FALLBACK_ENTERPRISES = [
+    { name: "AgriTurkey", id: "agriturkey", folderId: "1IdWQfK_mzOKp4Rc7LXtLP-W1FczCe_o_", applicantType: "INDIVIDUAL" },
+    { name: "B&B Banana Chips", id: "bandb-banana-chips", folderId: "1Rs4kY5SD0ITs-Ol-Zo8htgP8If-0cqyP", applicantType: "INDIVIDUAL" },
+    { name: "BP SQUASHELLA", id: "bp_squashella", folderId: "1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0", applicantType: "GROUP" },
+    { name: "CAPRA VERDE", id: "capra_verde", folderId: "1OBSrOknbVKQ54wOVzy1wyl2r_L_wPeKi", applicantType: "INDIVIDUAL" },
+    { name: "Carias Piggery", id: "carias_piggery", folderId: "1w5yWcoh0YUbWYOlRWLCUkj3CNh1Qvbwl", applicantType: "INDIVIDUAL" },
+    { name: "D-Arco RIR and Native Poultry Production", id: "darco_rir", folderId: "1DarcoRIRFolderIdPlaceholder00001", applicantType: "INDIVIDUAL" },
+    { name: "EcoCrunch", id: "ecocrunch", folderId: "1EcoCrunchFolderIdPlaceholder000001", applicantType: "INDIVIDUAL" },
+    { name: "Franklins Golden Grain", id: "franklins_golden_grain", folderId: "1FranklinsFolderIdPlaceholder000001", applicantType: "INDIVIDUAL" },
+    { name: "GILDGOAT", id: "gildgoat", folderId: "1GILDGOATFolderIdPlaceholder0000001", applicantType: "INDIVIDUAL" },
+    { name: "GrowMate (Digital Agri-tech)", id: "growmate", folderId: "1GrowMateFolderIdPlaceholder000001", applicantType: "GROUP" },
+    { name: "Kenths Boiler", id: "kenths_boiler", folderId: "1KenthsFolderIdPlaceholder00000001", applicantType: "INDIVIDUAL" },
+    { name: "R&L Banana Crunch", id: "rl_banana_crunch", folderId: "1RLBananaFolderIdPlaceholder0000001", applicantType: "INDIVIDUAL" },
+    { name: "RDB'S Heartland Farm", id: "rdbs_heartland_farm", folderId: "1RDBSFolderIdPlaceholder000000001", applicantType: "INDIVIDUAL" },
+    { name: "Royal Breed Genetic", id: "royal_breed_genetic", folderId: "1RoyalBreedFolderIdPlaceholder00001", applicantType: "INDIVIDUAL" },
+    { name: "WormTastik", id: "wormtastik", folderId: "1WormTastikFolderIdPlaceholder00001", applicantType: "INDIVIDUAL" },
+    { name: "YOLKYTOLK", id: "yolkytolk", folderId: "1YOLKYTOLKFolderIdPlaceholder00001", applicantType: "INDIVIDUAL" }
   ];
 
   return {
     generatedAt: new Date().toISOString(),
-    participants: DEFAULT_ENTERPRISES.map(ent => ({
+    source: 'hardcoded_fallback',
+    participants: FALLBACK_ENTERPRISES.map(ent => ({
       enterpriseFolderId: ent.folderId,
       id: ent.id,
       name: ent.name,
       applicantType: ent.applicantType,
-      driveUrl: `https://drive.google.com/drive/folders/12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y`,
+      driveUrl: `https://drive.google.com/drive/folders/${ent.folderId}`,
+      driveFolderId: ent.folderId,
       requirements: {
         applicationLetter: { status: "COMPLETE", automatedStatus: "COMPLETE", files: [{ name: "Application Letter.pdf", confidence: 0.95, detectionMethod: "FILENAME_MATCH" }] },
         applicationForm: { status: "COMPLETE", automatedStatus: "COMPLETE", files: [{ name: "Signed Application Form.pdf", confidence: 0.92, detectionMethod: "FILENAME_MATCH" }] },

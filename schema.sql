@@ -5,6 +5,11 @@
 -- 2. public.human_review_history: Immutable audit log of every review action.
 -- 3. public.scan_results: Automated Google Drive scanner outputs keyed by enterprise_folder_id + requirement_id.
 -- 4. public.scan_jobs: Online scan job status tracking for dashboard UI polling & diagnostics.
+--
+-- MIGRATION NOTES:
+-- The canonical enterprise identity is enterprise_folder_id (Google Drive Folder ID).
+-- enterprise_id (slug) is a secondary/legacy field and MUST NOT be used as a uniqueness key.
+-- All NEW constraints use enterprise_folder_id as the primary identity.
 -- ============================================================================
 
 -- Table 1: Current/Latest Human Review Decisions
@@ -19,9 +24,25 @@ CREATE TABLE IF NOT EXISTS public.human_reviews (
     reviewer_name TEXT DEFAULT 'Operational Reviewer',
     reviewer_notes TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
-    CONSTRAINT unique_enterprise_requirement UNIQUE (enterprise_id, requirement_id)
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add composite unique constraint on enterprise_folder_id + requirement_id
+-- This replaces the old (enterprise_id, requirement_id) constraint
+-- Migration is handled by api/scan.js reconciliation on each scan.
+-- This block only adds the constraint if it doesn't exist.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'unique_folder_requirement'
+    ) THEN
+        ALTER TABLE public.human_reviews
+        ADD CONSTRAINT unique_folder_requirement UNIQUE (enterprise_folder_id, requirement_id);
+
+        ALTER TABLE public.human_reviews
+        DROP CONSTRAINT IF EXISTS unique_enterprise_requirement;
+    END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_human_reviews_enterprise ON public.human_reviews(enterprise_id);
 CREATE INDEX IF NOT EXISTS idx_human_reviews_folder ON public.human_reviews(enterprise_folder_id);
@@ -80,6 +101,24 @@ CREATE TABLE IF NOT EXISTS public.scan_results (
     CONSTRAINT unique_scan_folder_req UNIQUE (enterprise_folder_id, requirement_id)
 );
 
+-- Clean up any rows with synthetic/legacy folder IDs (starting with 'folder_' or pure slugs)
+-- These should have been reconciled by the scanner to use real Google Drive folder IDs.
+-- The reconciliation happens in api/scan.js during each scan.
+DO $$
+DECLARE
+    legacy_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO legacy_count
+    FROM public.scan_results
+    WHERE enterprise_folder_id ~ '^[a-z][a-z0-9_]*$'
+      AND LENGTH(enterprise_folder_id) < 20
+      AND enterprise_folder_id NOT LIKE '1%';
+
+    IF legacy_count > 0 THEN
+        RAISE NOTICE 'Found % scan_results rows with legacy/synthetic folder IDs. Scanner reconciliation will fix these on next scan.', legacy_count;
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_scan_results_folder ON public.scan_results(enterprise_folder_id);
 CREATE INDEX IF NOT EXISTS idx_scan_results_enterprise ON public.scan_results(enterprise_id);
 ALTER TABLE public.scan_results ENABLE ROW LEVEL SECURITY;
@@ -94,7 +133,7 @@ CREATE POLICY "Allow public write scan results" ON public.scan_results FOR ALL U
 -- Table 4: Online Scan Jobs (Status Tracking for Polling & Safe Diagnostics)
 CREATE TABLE IF NOT EXISTS public.scan_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    status TEXT NOT NULL DEFAULT 'QUEUED', -- QUEUED, RUNNING, COMPLETED, FAILED
+    status TEXT NOT NULL DEFAULT 'QUEUED',
     started_at TIMESTAMPTZ DEFAULT now(),
     completed_at TIMESTAMPTZ,
     folders_found INTEGER DEFAULT 0,

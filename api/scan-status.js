@@ -28,13 +28,13 @@ module.exports = async (req, res) => {
 
     if (error || !jobs || jobs.length === 0) {
       return res.status(200).json({
-        status: "COMPLETED",
-        foldersFound: 16,
-        filesFound: 48,
-        filesProcessed: 48,
-        resultsSaved: 192,
+        status: "NO_JOB_FOUND",
+        foldersFound: 0,
+        filesFound: 0,
+        filesProcessed: 0,
+        resultsSaved: 0,
         newEnterprisesFound: 0,
-        error: null
+        error: jobId ? `No scan job found with ID: ${jobId}` : "No scan jobs found. Trigger a scan first."
       });
     }
 

@@ -38,6 +38,60 @@ let state = {
   scanPollInterval: null
 };
 
+function isRealGoogleDriveId(id) {
+  if (!id || typeof id !== 'string') return false;
+  return id.length > 15 && /[A-Z]/.test(id);
+}
+
+const MANUAL_FOLDER_ID_MAP = {
+  'bp_squashella': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'bp-squashélla': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'bp squashélla': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'bp squashella': '1Jr02P_7-qjKWYY2LobehBIUd9auqLKI0',
+  'darco_rir': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+  'd-arco-rir-and-native-poultry-production': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+  'd-arco rir and native': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+  'd-arco rir and native poultry production': '1K3nwxeK4iXphKY6h9rTTxM_hP4BRsDE7',
+};
+
+function buildDataJsonIdentityMap(localDataset) {
+  const map = { byId: {}, byName: {}, byFolderId: {}, byNormalizedId: {}, byNormalizedName: {} };
+  if (!localDataset || !localDataset.participants) return map;
+  localDataset.participants.forEach(p => {
+    const folderId = p.driveFolderId || p.enterpriseFolderId;
+    if (folderId) {
+      map.byId[p.id] = folderId;
+      map.byName[(p.name || '').toLowerCase().trim()] = folderId;
+      map.byFolderId[folderId] = folderId;
+      map.byNormalizedId[normalizeIdentityKey(p.id)] = folderId;
+      map.byNormalizedName[normalizeIdentityKey(p.name)] = folderId;
+    }
+  });
+  return map;
+}
+
+function normalizeIdentityKey(str) {
+  if (!str) return '';
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function resolveFolderKey(rawKey, enterpriseId, enterpriseName, identityMap) {
+  if (rawKey && isRealGoogleDriveId(rawKey)) return rawKey;
+  if (enterpriseId && MANUAL_FOLDER_ID_MAP[enterpriseId]) return MANUAL_FOLDER_ID_MAP[enterpriseId];
+  if (enterpriseName && MANUAL_FOLDER_ID_MAP[enterpriseName.toLowerCase().trim()]) {
+    return MANUAL_FOLDER_ID_MAP[enterpriseName.toLowerCase().trim()];
+  }
+  if (enterpriseId && identityMap.byId[enterpriseId]) return identityMap.byId[enterpriseId];
+  if (enterpriseName && identityMap.byName[enterpriseName.toLowerCase().trim()]) {
+    return identityMap.byName[enterpriseName.toLowerCase().trim()];
+  }
+  const normId = normalizeIdentityKey(enterpriseId);
+  if (normId && identityMap.byNormalizedId[normId]) return identityMap.byNormalizedId[normId];
+  const normName = normalizeIdentityKey(enterpriseName);
+  if (normName && identityMap.byNormalizedName[normName]) return identityMap.byNormalizedName[normName];
+  return rawKey;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initSupabaseClient();
   loadLocalOverrides();
@@ -93,7 +147,7 @@ function saveLocalOverrides() {
   }
 }
 
-async function fetchHumanReviewsFromSupabase() {
+async function fetchHumanReviewsFromSupabase(identityMap) {
   if (!supabaseClient) return null;
   try {
     const { data, error } = await supabaseClient
@@ -107,7 +161,7 @@ async function fetchHumanReviewsFromSupabase() {
 
     const reviewsMap = {};
     (data || []).forEach(row => {
-      const entKey = row.enterprise_folder_id || row.enterprise_id;
+      const entKey = resolveFolderKey(row.enterprise_folder_id, row.enterprise_id, null, identityMap || { byId: {}, byName: {}, byFolderId: {} });
       if (!reviewsMap[entKey]) reviewsMap[entKey] = {};
       reviewsMap[entKey][row.requirement_id] = {
         manualStatus: row.human_status,
@@ -116,7 +170,7 @@ async function fetchHumanReviewsFromSupabase() {
         note: row.reviewer_notes || "",
         fileId: row.file_id || ""
       };
-      // Map both folder ID and enterprise string for fallback resilience
+      // Also map by enterprise_id for fallback resilience
       if (row.enterprise_id && row.enterprise_id !== entKey) {
         if (!reviewsMap[row.enterprise_id]) reviewsMap[row.enterprise_id] = {};
         reviewsMap[row.enterprise_id][row.requirement_id] = reviewsMap[entKey][row.requirement_id];
@@ -132,7 +186,8 @@ async function fetchHumanReviewsFromSupabase() {
     if (histData) {
       const histMap = {};
       histData.forEach(h => {
-        const key = `${h.enterprise_folder_id || h.enterprise_id}_${h.requirement_id}`;
+        const resolvedKey = resolveFolderKey(h.enterprise_folder_id, h.enterprise_id, null, identityMap || { byId: {}, byName: {}, byFolderId: {} });
+        const key = `${resolvedKey}_${h.requirement_id}`;
         if (!histMap[key]) histMap[key] = [];
         histMap[key].push({
           id: h.id,
@@ -161,7 +216,7 @@ async function fetchHumanReviewsFromSupabase() {
   }
 }
 
-async function fetchScanResultsFromSupabase() {
+async function fetchScanResultsFromSupabase(identityMap) {
   if (!supabaseClient) return null;
   try {
     const { data, error } = await supabaseClient
@@ -172,17 +227,19 @@ async function fetchScanResultsFromSupabase() {
 
     const scanMap = {};
     data.forEach(row => {
-      const primaryFolderId = row.enterprise_folder_id || row.enterprise_id;
-      if (!scanMap[primaryFolderId]) {
-        scanMap[primaryFolderId] = {
-          _enterpriseFolderId: primaryFolderId,
+      const rawFolderId = row.enterprise_folder_id;
+      const resolvedFolderId = resolveFolderKey(rawFolderId, row.enterprise_id, row.enterprise_name, identityMap);
+
+      if (!scanMap[resolvedFolderId]) {
+        scanMap[resolvedFolderId] = {
+          _enterpriseFolderId: resolvedFolderId,
           _enterpriseId: row.enterprise_id,
           _enterpriseName: row.enterprise_name,
           _applicantType: row.applicant_type,
           _driveUrl: row.drive_url
         };
       }
-      scanMap[primaryFolderId][row.requirement_id] = {
+      scanMap[resolvedFolderId][row.requirement_id] = {
         automatedStatus: row.automated_status,
         confidence: row.confidence,
         documentType: row.document_type,
@@ -212,11 +269,14 @@ async function fetchData() {
     console.warn("data.json fetch skipped:", e);
   }
 
-  // Load live scan results from Supabase
-  const cloudScanMap = await fetchScanResultsFromSupabase();
+  // Build identity resolution map from data.json
+  const identityMap = buildDataJsonIdentityMap(localDataset);
 
-  // Load human reviews from Supabase
-  const supabaseReviews = await fetchHumanReviewsFromSupabase();
+  // Load live scan results from Supabase with identity resolution
+  const cloudScanMap = await fetchScanResultsFromSupabase(identityMap);
+
+  // Load human reviews from Supabase with identity resolution
+  const supabaseReviews = await fetchHumanReviewsFromSupabase(identityMap);
   if (supabaseReviews) {
     state.overrides = { ...state.overrides, ...supabaseReviews };
     saveLocalOverrides();
@@ -235,12 +295,13 @@ async function fetchData() {
   }
 
   // Dynamically merge or add enterprises from Supabase scan_results keyed by enterprise_folder_id
+  // Cloud scan data is AUTHORITATIVE when available - it updates static data
   if (cloudScanMap) {
     Object.keys(cloudScanMap).forEach(folderKey => {
       const entScan = cloudScanMap[folderKey];
       
       if (!participantsMap[folderKey]) {
-        // NEW ENTERPRISE DISCOVERED ONLINE!
+        // NEW ENTERPRISE DISCOVERED ONLINE (not in data.json)
         participantsMap[folderKey] = {
           enterpriseFolderId: folderKey,
           id: entScan._enterpriseId || folderKey,
@@ -251,8 +312,10 @@ async function fetchData() {
           requirements: {}
         };
       } else {
+        // EXISTING ENTERPRISE - cloud data is authoritative for name/type
         if (entScan._enterpriseName) participantsMap[folderKey].name = entScan._enterpriseName;
         if (entScan._applicantType) participantsMap[folderKey].applicantType = entScan._applicantType;
+        if (entScan._driveUrl) participantsMap[folderKey].driveUrl = entScan._driveUrl;
       }
 
       // Populate requirement statuses from scan_results
@@ -901,7 +964,7 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
           reviewer_name: reviewerName,
           reviewer_notes: note,
           updated_at: new Date().toISOString()
-        }, { onConflict: 'enterprise_id,requirement_id' });
+        }, { onConflict: 'enterprise_folder_id,requirement_id' });
 
       // Insert immutable audit history record
       await supabaseClient
@@ -971,6 +1034,28 @@ async function triggerCloudDriveScan() {
       return;
     }
 
+    if (data.success && data.status === "COMPLETED") {
+      state.isScanning = false;
+      if (btnScan) btnScan.disabled = false;
+
+      await fetchData();
+
+      const folders = data.uniqueEnterpriseFolders || data.foldersFound || state.participants.length;
+      const newFound = data.newEnterprisesFound || 0;
+      const saved = data.resultsSaved || 0;
+      const reconciled = data.legacyRecordsReconciled || 0;
+
+      if (scanLabel) scanLabel.textContent = `Scan complete — ${folders} enterprises`;
+
+      const msgParts = [`${folders} unique enterprise folders scanned`];
+      if (newFound > 0) msgParts.push(`${newFound} new enterprise(s) found`);
+      if (saved > 0) msgParts.push(`${saved} results saved`);
+      if (reconciled > 0) msgParts.push(`${reconciled} legacy records reconciled`);
+
+      showToast(`Scan complete: ${msgParts.join(', ')} ✓`, "success");
+      return;
+    }
+
     state.activeJobId = data.jobId;
 
     if (btnScan) {
@@ -982,11 +1067,11 @@ async function triggerCloudDriveScan() {
 
   } catch (err) {
     console.warn("Failed calling /api/scan endpoint, triggering scan data reload fallback:", err);
-    showToast("Starting scan data refresh...", "info");
+    showToast("Scan endpoint unreachable. Refreshing data from database...", "info");
     setTimeout(async () => {
       await fetchData();
-      resetScanUI("Scan complete");
-      showToast("Scan data refreshed successfully! ✓", "success");
+      resetScanUI("Refreshed (scan endpoint unavailable)");
+      showToast("Data refreshed from database ✓", "success");
     }, 1500);
   }
 }
@@ -1023,6 +1108,12 @@ function startScanStatusPolling(jobId) {
         state.scanPollInterval = null;
         resetScanUI("Scan failed");
         showToast(`Scan Failed: ${data.error || 'Unknown server error'}`, "error");
+      } else if (data.status === 'NO_JOB_FOUND') {
+        clearInterval(state.scanPollInterval);
+        state.scanPollInterval = null;
+        await fetchData();
+        resetScanUI("No active scan found");
+        showToast("No active scan job. Data refreshed from database.", "info");
       }
     } catch (err) {
       console.warn("Poll status error:", err);
