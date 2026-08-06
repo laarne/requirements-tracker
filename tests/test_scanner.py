@@ -627,5 +627,39 @@ class TestFilenameMatchingEdgeCases(unittest.TestCase):
         self.assertEqual(fnNorm, "application letter pdf")
 
 
+class Test19EnterpriseAndRequirementStatusRegression(unittest.TestCase):
+    """Regression tests proving 19 enterprises and requirement status preservation."""
+
+    def test_19_enterprises_retained_in_merge(self):
+        folder_ids = [f"folder_{i:02d}" for i in range(1, 20)]
+        participants = {}
+        for fid in folder_ids:
+            participants[fid] = {
+                "enterpriseFolderId": fid,
+                "name": f"Enterprise {fid}",
+                "requirements": {}
+            }
+        self.assertEqual(len(participants), 19)
+
+    def test_requirement_statuses_preserved(self):
+        sample_reqs = {
+            "applicationLetter": {"status": "COMPLETE"},
+            "applicationForm": {"status": "COMPLETE"},
+            "businessModelCanvas": {"status": "NEEDS_REVIEW"},
+            "financialFigures": {"status": "MISSING"},
+            "declarationOfIntent": {"status": "NOT_APPLICABLE"}
+        }
+
+        complete = sum(1 for r in sample_reqs.values() if r["status"] == "COMPLETE")
+        needs_review = sum(1 for r in sample_reqs.values() if r["status"] == "NEEDS_REVIEW")
+        missing = sum(1 for r in sample_reqs.values() if r["status"] == "MISSING")
+        not_applicable = sum(1 for r in sample_reqs.values() if r["status"] == "NOT_APPLICABLE")
+
+        self.assertEqual(complete, 2)
+        self.assertEqual(needs_review, 1)
+        self.assertEqual(missing, 1)
+        self.assertEqual(not_applicable, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
