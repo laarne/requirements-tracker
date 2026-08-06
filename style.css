@@ -925,10 +925,29 @@ body.drawer-open {
   color: var(--text-muted);
 }
 
-.drive-link {
-  color: var(--primary);
+.drive-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #2563eb;
+  color: #ffffff !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 6px;
   text-decoration: none;
-  font-weight: 600;
+  border: 1px solid #3b82f6;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.drive-link-btn:hover {
+  background-color: #1d4ed8;
+  color: #ffffff !important;
+  border-color: #60a5fa;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.6);
+  transform: translateY(-1px);
 }
 
 .drawer-subhead-counts {
