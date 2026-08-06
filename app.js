@@ -1006,7 +1006,11 @@ function openDrawer(participantId) {
     reviewRequiredList.appendChild(emptyDiv);
   }
 
-  completedCountTag.textContent = `(${completeCount})`;
+  if (p.applicantType === "GROUP" && p.totalGroupSlots) {
+    completedCountTag.textContent = `(${p.completeCount} / ${p.totalGroupSlots} slots completed · ${completeCount} requirement categories)`;
+  } else {
+    completedCountTag.textContent = `(${completeCount})`;
+  }
 
   document.getElementById("drawer-overlay").classList.remove("hidden");
   document.getElementById("participant-drawer").classList.remove("hidden");
