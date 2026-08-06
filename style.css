@@ -411,25 +411,41 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   Review Priority Bar
+   Body Drawer Lock
    -------------------------------------------------------------------------- */
-.priority-bar-card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
+body.drawer-open {
+  overflow: hidden !important;
 }
 
-.priority-bar-label {
-  font-size: 0.6875rem;
+/* --------------------------------------------------------------------------
+   Priority Work Queue Section
+   -------------------------------------------------------------------------- */
+.priority-work-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.priority-work-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.section-heading {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
   font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+
+.section-subhead {
+  font-size: 0.775rem;
   color: var(--text-muted);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  margin-top: 1px;
 }
 
 .priority-tags-group {
@@ -443,10 +459,10 @@ body {
   background: var(--bg-foundation);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  padding: 4px 12px;
+  padding: 5px 12px;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -456,6 +472,13 @@ body {
 
 .priority-chip:hover, .priority-chip.active {
   border-color: var(--primary);
+  background-color: var(--bg-surface-hover);
+}
+
+.chip-all.active {
+  border-color: var(--primary);
+  background-color: var(--primary-light);
+  color: #a5b4fc;
 }
 
 .chip-count {
@@ -469,6 +492,142 @@ body {
 .chip-review .chip-count { background: var(--warning-bg); color: var(--warning); }
 .chip-high .chip-count { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
 .chip-complete .chip-count { background: var(--success-bg); color: var(--success); }
+
+/* Priority Operational Table */
+.priority-table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.priority-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+.priority-table th {
+  background-color: #162032;
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.priority-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.priority-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.priority-table tbody tr:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+/* Filter Active Indicator Banner */
+.filter-chip-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(99, 102, 241, 0.1);
+  border: 1px solid var(--primary);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.775rem;
+}
+
+.filter-chip-label {
+  font-weight: 700;
+  color: #a5b4fc;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+}
+
+.filter-active-chip {
+  background-color: var(--primary);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-active-chip button {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* Drawer Member Summary Widget */
+.drawer-members-section {
+  background-color: var(--bg-foundation);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-members-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.member-pill {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.member-pill:hover {
+  border-color: var(--primary);
+}
+
+.member-pill.complete {
+  color: var(--success);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.member-pill.incomplete {
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.next-action-bullet-list {
+  margin-top: 4px;
+  margin-left: 18px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.next-action-bullet-list li {
+  margin-bottom: 2px;
+}
 
 /* --------------------------------------------------------------------------
    Requirements Health & Action Center Grid

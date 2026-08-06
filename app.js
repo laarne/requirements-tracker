@@ -597,7 +597,9 @@ function recalculateEnterpriseScores(p) {
 }
 
 function generateNextActionString(p) {
-  if (p.completionRate === 100) return "Enterprise is fully compliant! All required documents submitted.";
+  if (p.completionRate === 100) {
+    return "<span style='color:#34d399; font-weight:700;'>✓ Enterprise is fully compliant! All required documents submitted.</span>";
+  }
   
   const reqs = p.requirements || {};
   const missingNames = [];
@@ -606,7 +608,7 @@ function generateNextActionString(p) {
   Object.keys(CANONICAL_REQUIREMENTS).forEach(k => {
     const doc = reqs[k];
     if (doc && doc.status !== "NOT_APPLICABLE") {
-      if (doc.status === "MISSING" || doc.status === "REJECTED") {
+      if (doc.status === "MISSING" || doc.status === "REJECTED" || doc.status === "INCOMPLETE") {
         missingNames.push(CANONICAL_REQUIREMENTS[k]);
       } else if (doc.status === "NEEDS_REVIEW") {
         reviewNames.push(CANONICAL_REQUIREMENTS[k]);
@@ -614,14 +616,17 @@ function generateNextActionString(p) {
     }
   });
 
-  if (missingNames.length > 0 && reviewNames.length > 0) {
-    return `Submit ${missingNames.slice(0, 2).join(", ")} and verify ${reviewNames.slice(0, 2).join(", ")}.`;
-  } else if (missingNames.length > 0) {
-    return `Submit ${missingNames.length} missing document${missingNames.length > 1 ? 's' : ''}: ${missingNames.slice(0, 3).join(", ")}.`;
-  } else if (reviewNames.length > 0) {
-    return `Review ${reviewNames.length} document${reviewNames.length > 1 ? 's' : ''} requiring human verification: ${reviewNames.slice(0, 3).join(", ")}.`;
-  }
-  return "Review enterprise document checklist.";
+  const totalOutstanding = missingNames.length + reviewNames.length;
+  let html = `Complete ${totalOutstanding} outstanding requirement${totalOutstanding > 1 ? 's' : ''}:`;
+  html += `<ul class="next-action-bullet-list">`;
+  missingNames.forEach(n => {
+    html += `<li><strong>${escapeHtml(n)}</strong> <span style="color:#f87171; font-size:0.75rem; font-weight:600;">(Missing)</span></li>`;
+  });
+  reviewNames.forEach(n => {
+    html += `<li><strong>${escapeHtml(n)}</strong> <span style="color:#fbbf24; font-size:0.75rem; font-weight:600;">(Needs Verification)</span></li>`;
+  });
+  html += `</ul>`;
+  return html;
 }
 
 function updateHeaderMetadata(data) {
@@ -690,11 +695,48 @@ function applyFiltersAndRender() {
 
   state.filteredParticipants = list;
 
+  // Filter Indicator Chip
+  const chipContainer = document.getElementById("filter-active-chip-container");
+  const chipText = document.getElementById("filter-active-chip-text");
+  if (chipContainer && chipText) {
+    if (state.activeFilterReq !== "all") {
+      const rKey = state.activeFilterReq.replace("missing_", "");
+      const rName = CANONICAL_REQUIREMENTS[rKey] || rKey;
+      chipText.innerHTML = `Requirement: ${escapeHtml(rName)} <button id="btn-clear-active-chip" title="Clear Filter">&times;</button>`;
+      chipContainer.classList.remove("hidden");
+    } else if (state.activeFilterStatus !== "all") {
+      chipText.innerHTML = `Status: ${escapeHtml(state.activeFilterStatus)} <button id="btn-clear-active-chip" title="Clear Filter">&times;</button>`;
+      chipContainer.classList.remove("hidden");
+    } else if (state.activeFilterType !== "all") {
+      chipText.innerHTML = `Type: ${escapeHtml(state.activeFilterType)} <button id="btn-clear-active-chip" title="Clear Filter">&times;</button>`;
+      chipContainer.classList.remove("hidden");
+    } else {
+      chipContainer.classList.add("hidden");
+    }
+
+    const btnClear = document.getElementById("btn-clear-active-chip");
+    if (btnClear) btnClear.addEventListener("click", resetAllFilters);
+  }
+
   renderKPICards();
-  renderPriorityBar();
+  renderPriorityWorkQueue();
   renderAnalyticsBars();
   renderActionCenter();
   renderTable();
+}
+
+function resetAllFilters() {
+  state.activeSearchQuery = "";
+  state.activeFilterStatus = "all";
+  state.activeFilterType = "all";
+  state.activeFilterReq = "all";
+  state.activeSort = "name_asc";
+  document.getElementById("search-input").value = "";
+  document.getElementById("filter-status-select").value = "all";
+  document.getElementById("filter-type-select").value = "all";
+  document.getElementById("filter-req-select").value = "all";
+  document.getElementById("sort-select").value = "name_asc";
+  applyFiltersAndRender();
 }
 
 function renderKPICards() {
@@ -702,7 +744,9 @@ function renderKPICards() {
   const complete = state.participants.filter(p => p.status === "COMPLETE").length;
   const needsReview = state.participants.filter(p => p.needsReviewCount > 0 || p.status === "NEEDS_REVIEW").length;
   const incomplete = state.participants.filter(p => p.completionRate < 100).length;
-  const avgComp = total > 0 ? Math.round((state.participants.reduce((acc, p) => acc + p.completionRate, 0) / total) * 10) / 10 : 0;
+  const totalSlotsAll = state.participants.reduce((acc, p) => acc + (p.applicableRequirementsCount || 11), 0);
+  const completedSlotsAll = state.participants.reduce((acc, p) => acc + (p.completeCount || 0), 0);
+  const avgComp = totalSlotsAll > 0 ? Math.round((completedSlotsAll / totalSlotsAll) * 1000) / 10 : 0;
 
   document.getElementById("val-total-participants").textContent = total;
   document.getElementById("val-needs-review").textContent = needsReview;
@@ -715,20 +759,73 @@ function renderKPICards() {
   });
 }
 
-function renderPriorityBar() {
+function renderPriorityWorkQueue() {
   const total = state.participants.length;
   const complete = state.participants.filter(p => p.status === "COMPLETE").length;
   const needsReview = state.participants.filter(p => p.needsReviewCount > 0).length;
   const highPriority = state.participants.filter(p => p.priority === "HIGH").length;
   const requiringAction = total - complete;
 
-  document.getElementById("priority-cnt-action").textContent = requiringAction;
-  document.getElementById("priority-cnt-review").textContent = needsReview;
-  document.getElementById("priority-cnt-high").textContent = highPriority;
-  document.getElementById("priority-cnt-complete").textContent = complete;
+  const subhead = document.getElementById("priority-work-subhead");
+  if (subhead) subhead.textContent = `${requiringAction} enterprises require action`;
+
+  const elAction = document.getElementById("priority-cnt-action");
+  if (elAction) elAction.textContent = requiringAction;
+  const elReview = document.getElementById("priority-cnt-review");
+  if (elReview) elReview.textContent = needsReview;
+  const elHigh = document.getElementById("priority-cnt-high");
+  if (elHigh) elHigh.textContent = highPriority;
+  const elComplete = document.getElementById("priority-cnt-complete");
+  if (elComplete) elComplete.textContent = complete;
 
   document.querySelectorAll(".priority-chip").forEach(chip => {
     chip.classList.toggle("active", chip.dataset.filter === state.activeFilterStatus);
+  });
+
+  const tbody = document.getElementById("priority-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  const priorityList = [...state.filteredParticipants].slice(0, 6);
+
+  if (priorityList.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No priority enterprises found matching active filter criteria.</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  priorityList.forEach(p => {
+    const tr = document.createElement("tr");
+    const primaryKey = p.enterpriseFolderId || p.driveFolderId || p.id;
+    tr.dataset.id = primaryKey;
+
+    let statusBadgeHtml = `<span class="badge badge-missing">Action Required</span>`;
+    if (p.status === "COMPLETE") statusBadgeHtml = `<span class="badge badge-approved">Fully Compliant</span>`;
+    else if (p.needsReviewCount > 0) statusBadgeHtml = `<span class="badge badge-review">Needs Review</span>`;
+
+    const outstandingText = p.status === "COMPLETE" ? "0 missing" : `${p.missingCount} missing${p.needsReviewCount > 0 ? ` · ${p.needsReviewCount} review` : ''}`;
+
+    tr.innerHTML = `
+      <td><strong style="color:#f8fafc;">${escapeHtml(p.name)}</strong></td>
+      <td><span class="badge" style="background:#1f2937; color:#d1d5db;">${(p.applicantType || 'INDIVIDUAL').toUpperCase()}</span></td>
+      <td>
+        <div style="display:flex; align-items:center; gap:8px; width:130px;">
+          <span style="font-weight:700; font-size:0.75rem; width:40px;">${p.completionRate}%</span>
+          <div class="progress-bar-bg" style="flex:1; height:6px;">
+            <div class="progress-bar-fill" style="width:${p.completionRate}%;"></div>
+          </div>
+        </div>
+      </td>
+      <td><span style="font-size:0.75rem; font-weight:600; color:${p.missingCount > 0 ? '#f87171' : '#34d399'};">${outstandingText}</span></td>
+      <td>${statusBadgeHtml}</td>
+      <td style="text-align:right;">
+        <button class="btn btn-primary btn-sm btn-review-priority" data-id="${primaryKey}">Review →</button>
+      </td>
+    `;
+
+    tr.addEventListener("click", () => openDrawer(primaryKey));
+    tbody.appendChild(tr);
   });
 }
 
@@ -898,12 +995,42 @@ function openDrawer(participantId) {
 
   document.getElementById("drawer-subhead-counts").textContent = `${p.missingCount} Missing · ${p.needsReviewCount} Needs Review · ${p.completeCount} Complete`;
 
-  // Next Action
-  document.getElementById("drawer-next-action-text").textContent = generateNextActionString(p);
+  // Next Action HTML
+  const elNextAction = document.getElementById("drawer-next-action-text");
+  if (elNextAction) elNextAction.innerHTML = generateNextActionString(p);
+
+  // Group Members Summary Widget
+  const memSection = document.getElementById("drawer-members-section");
+  const memListContainer = document.getElementById("drawer-members-list");
+  if (memSection && memListContainer) {
+    if (p.applicantType === "GROUP" && p.groupMembers && p.groupMembers.length > 0) {
+      memSection.classList.remove("hidden");
+      memListContainer.innerHTML = p.groupMembers.map(m => {
+        const memDet = p.memberDetails ? p.memberDetails[m] : null;
+        let compPersonalCount = 0;
+        if (memDet) {
+          ["validId", "proofOfResidency", "photo2x2"].forEach(rk => {
+            if (memDet[rk] && (memDet[rk].status === "COMPLETE" || memDet[rk].status === "APPROVED")) {
+              compPersonalCount++;
+            }
+          });
+        }
+        const isAllComp = compPersonalCount === 3;
+        return `<span class="member-pill ${isAllComp ? 'complete' : 'incomplete'}">
+          ${isAllComp ? '✓' : '⚠'} <strong>${escapeHtml(m)}</strong> ${compPersonalCount}/3
+        </span>`;
+      }).join("");
+    } else {
+      memSection.classList.add("hidden");
+    }
+  }
 
   const reviewRequiredList = document.getElementById("drawer-review-required-list");
   const completedList = document.getElementById("drawer-completed-list");
   const completedCountTag = document.getElementById("completed-count-tag");
+  const completedDetails = document.getElementById("drawer-completed-details");
+
+  if (completedDetails) completedDetails.removeAttribute("open"); // Collapse completed section by default
 
   reviewRequiredList.innerHTML = "";
   completedList.innerHTML = "";
@@ -936,7 +1063,7 @@ function openDrawer(participantId) {
       memberListHtml = `
         <div style="margin-top:6px; background:#111827; padding:6px 10px; border-radius:4px; border:1px solid #374151;">
           <div style="font-size:0.72rem; font-weight:700; color:#38bdf8; margin-bottom:4px;">
-            MEMBER CHECKLIST (${compCount} / ${mems.length} MEMBERS COMPLETE):
+            MEMBER VERIFICATION (${compCount} / ${mems.length} MEMBERS VERIFIED):
           </div>
           <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.72rem;">
             ${mems.map(m => {
@@ -951,9 +1078,32 @@ function openDrawer(participantId) {
       `;
     }
 
+    let actionButtonsHtml = '';
+    if (!isNotApplicable) {
+      if (docData.status === "NEEDS_REVIEW") {
+        actionButtonsHtml = `
+          <div class="doc-item-actions">
+            <button class="btn btn-primary btn-sm btn-inspect-doc" data-doc="${docKey}">Inspect Evidence</button>
+            <button class="btn btn-success btn-sm btn-approve-doc" data-doc="${docKey}">Approve</button>
+            <button class="btn btn-danger btn-sm btn-reject-doc" data-doc="${docKey}">Mark Missing</button>
+          </div>`;
+      } else if (docData.status === "MISSING" || docData.status === "REJECTED") {
+        actionButtonsHtml = `
+          <div class="doc-item-actions">
+            <button class="btn btn-secondary btn-sm btn-inspect-doc" data-doc="${docKey}">View Details & History</button>
+            <button class="btn btn-danger btn-sm btn-reject-doc" data-doc="${docKey}">Mark Missing</button>
+          </div>`;
+      } else {
+        actionButtonsHtml = `
+          <div class="doc-item-actions">
+            <button class="btn btn-secondary btn-sm btn-inspect-doc" data-doc="${docKey}">Inspect Evidence</button>
+          </div>`;
+      }
+    }
+
     card.innerHTML = `
       <div class="doc-item-header">
-        <span class="doc-item-title">${docName} ${files.length > 1 ? `<span style="font-size:0.75rem; color:#f59e0b;">(${files.length} files matched)</span>` : ''}</span>
+        <span class="doc-item-title">${docName} ${files.length > 1 ? `<span style="font-size:0.72rem; color:#94a3b8; margin-left:6px;">(${files.length} files matched)</span>` : ''}</span>
         <div style="display:flex; gap:4px; align-items:center;">
           ${histBadgeTag}
           ${humanReviewBadge}
@@ -965,12 +1115,7 @@ function openDrawer(participantId) {
       </div>
       ${memberListHtml}
       ${docData.review ? `<span class="meta-sub" style="font-size:0.7rem; color:#a5b4fc;">Entered by: <strong>${escapeHtml(docData.review.reviewedBy || 'Operational Reviewer')}</strong> (${new Date(docData.review.reviewedAt).toLocaleTimeString()}) ${docData.review.note ? `— <em>"${escapeHtml(docData.review.note)}"</em>` : ''}</span>` : ''}
-      ${!isNotApplicable ? `
-      <div class="doc-item-actions">
-        ${files.length > 0 ? `<button class="btn btn-secondary btn-sm btn-inspect-doc" data-doc="${docKey}">Inspect Evidence</button>` : `<button class="btn btn-secondary btn-sm btn-inspect-doc" data-doc="${docKey}">View Details & History</button>`}
-        <button class="btn btn-success btn-sm btn-approve-doc" data-doc="${docKey}">Approve</button>
-        <button class="btn btn-danger btn-sm btn-reject-doc" data-doc="${docKey}">Mark Missing</button>
-      </div>` : ''}
+      ${actionButtonsHtml}
     `;
 
     const btnInspect = card.querySelector(".btn-inspect-doc");
@@ -997,12 +1142,19 @@ function openDrawer(participantId) {
     }
   });
 
+  const titleActionReq = document.getElementById("drawer-action-required-title");
+  if (titleActionReq) titleActionReq.textContent = `ACTION REQUIRED · ${reviewCount}`;
+
   if (reviewCount === 0) {
     const emptyDiv = document.createElement("div");
-    emptyDiv.style.fontSize = "0.8rem";
-    emptyDiv.style.color = "#10b981";
-    emptyDiv.style.fontWeight = "600";
-    emptyDiv.textContent = "✓ All mandatory requirements satisfied!";
+    emptyDiv.style.fontSize = "0.825rem";
+    emptyDiv.style.color = "#34d399";
+    emptyDiv.style.fontWeight = "700";
+    emptyDiv.style.padding = "12px";
+    emptyDiv.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
+    emptyDiv.style.borderRadius = "6px";
+    emptyDiv.style.border = "1px solid #10b981";
+    emptyDiv.textContent = "✓ FULLY COMPLIANT — All applicable requirements are complete.";
     reviewRequiredList.appendChild(emptyDiv);
   }
 
@@ -1012,6 +1164,7 @@ function openDrawer(participantId) {
     completedCountTag.textContent = `(${completeCount})`;
   }
 
+  document.body.classList.add("drawer-open");
   document.getElementById("drawer-overlay").classList.remove("hidden");
   document.getElementById("participant-drawer").classList.remove("hidden");
 }
@@ -1035,6 +1188,7 @@ function openPrevEnterprise() {
 }
 
 function closeDrawer() {
+  document.body.classList.remove("drawer-open");
   document.getElementById("drawer-overlay").classList.add("hidden");
   document.getElementById("participant-drawer").classList.add("hidden");
   state.selectedParticipantId = null;
