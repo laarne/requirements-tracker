@@ -46,6 +46,11 @@
         </button>
         <button class="btn btn-secondary btn-sm" id="btn-refresh" title="Reload dashboard & Supabase human reviews">Refresh Data</button>
 
+        <button class="btn btn-secondary btn-sm" id="btn-open-excluded-modal" title="Manage excluded enterprises hidden from tracker">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          Excluded (<span id="excluded-count-badge">0</span>)
+        </button>
+
         <div class="dropdown">
           <button class="btn btn-secondary btn-sm" id="btn-export-dropdown">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -305,8 +310,71 @@
           <!-- Completed items rendered here -->
         </div>
       </details>
+
+      <!-- ENTERPRISE MANAGEMENT SECTION -->
+      <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-color);">
+        <div style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">ENTERPRISE MANAGEMENT</div>
+        <button class="btn btn-secondary btn-sm" id="btn-remove-enterprise-drawer" style="color:#f87171; border-color:#7f1d1d; background:rgba(239, 68, 68, 0.1);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          Remove from Tracker
+        </button>
+      </div>
     </div>
   </aside>
+
+  <!-- Remove Enterprise Confirmation Modal -->
+  <div class="modal-overlay hidden" id="modal-confirm-remove-overlay">
+    <div class="modal" style="max-width:480px; width:92%;">
+      <div class="modal-header" style="background:#7f1d1d; border-bottom:1px solid #991b1b;">
+        <div>
+          <h3 style="color:#fca5a5; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#f87171;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Remove this enterprise from the tracker?
+          </h3>
+          <p class="subtitle" style="color:#fecaca; margin-top:2px;" id="remove-modal-ent-title">AgriTurkey</p>
+        </div>
+        <button class="btn-close" id="btn-close-remove-modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:20px;">
+        <div style="background:#1f2937; padding:14px; border-radius:6px; border:1px solid #374151; margin-bottom:16px; font-size:0.85rem; color:#d1d5db; line-height:1.5;">
+          <p style="margin:0 0 10px 0;">This will:</p>
+          <ul style="margin:0; padding-left:20px; color:#f8fafc;">
+            <li style="margin-bottom:6px;">Remove <strong id="remove-modal-ent-name" style="color:#f87171;">AgriTurkey</strong> from the active dashboard</li>
+            <li style="margin-bottom:6px;">Prevent future Google Drive scans from adding it again</li>
+            <li>Keep all files in Google Drive <strong style="color:#34d399;">completely untouched</strong></li>
+          </ul>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-secondary" id="btn-cancel-remove">Cancel</button>
+          <button class="btn btn-danger" id="btn-confirm-remove-enterprise">Remove Enterprise</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Excluded Enterprises List Modal -->
+  <div class="modal-overlay hidden" id="modal-excluded-list-overlay">
+    <div class="modal" style="max-width:580px; width:92%;">
+      <div class="modal-header" style="background:#1e1b4b; border-bottom:1px solid #4338ca;">
+        <div>
+          <h3 style="color:#a5b4fc; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#818cf8;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            EXCLUDED ENTERPRISES
+          </h3>
+          <p class="subtitle" style="color:#c7d2fe; margin-top:2px; font-size:0.8rem;">Enterprises hidden from tracker and skipped during scans</p>
+        </div>
+        <button class="btn-close" id="btn-close-excluded-modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px;">
+        <div id="excluded-list-container" style="max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <!-- Dynamically rendered -->
+        </div>
+        <div style="display:flex; justify-content:flex-end; margin-top:14px;">
+          <button class="btn btn-secondary" id="btn-done-excluded">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Flag Document Issue Modal -->
   <div class="modal-overlay hidden" id="modal-flag-issue-overlay">

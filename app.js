@@ -33,6 +33,8 @@ let state = {
   selectedDocId: null,
   overrides: {},
   reviewHistory: {},
+  exclusions: {},
+  pendingRemovalEnterprise: null,
   isScanning: false,
   activeJobId: null,
   scanPollInterval: null
@@ -242,6 +244,220 @@ async function fetchHumanReviewsFromSupabase(identityMap) {
   }
 }
 
+async function fetchExclusionsFromSupabase(identityMap) {
+  const exclusionsMap = {};
+
+  try {
+    const rawLocal = localStorage.getItem("yfc_excluded_enterprises");
+    if (rawLocal) {
+      const parsed = JSON.parse(rawLocal);
+      Object.keys(parsed).forEach(k => {
+        if (parsed[k] && parsed[k].active !== false) {
+          exclusionsMap[k] = parsed[k];
+        }
+      });
+    }
+  } catch (e) {}
+
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from('excluded_enterprises')
+        .select('*')
+        .eq('active', true);
+
+      if (!error && data) {
+        data.forEach(row => {
+          const resolvedKey = resolveFolderKey(row.drive_folder_id || row.enterprise_key, row.enterprise_key, row.enterprise_name, identityMap || { byId: {}, byName: {}, byFolderId: {}, byNormalizedId: {}, byNormalizedName: {} });
+          const exObj = {
+            id: row.id,
+            enterpriseKey: row.enterprise_key,
+            enterpriseName: row.enterprise_name,
+            normalizedName: row.normalized_name || normalizeIdentityKey(row.enterprise_name),
+            driveFolderId: row.drive_folder_id || resolvedKey,
+            excludedAt: row.excluded_at || row.created_at,
+            active: true
+          };
+          exclusionsMap[resolvedKey] = exObj;
+          if (row.enterprise_key) exclusionsMap[row.enterprise_key] = exObj;
+          if (row.normalized_name) exclusionsMap[`norm_${row.normalized_name}`] = exObj;
+        });
+      }
+    } catch (err) {
+      console.warn("[LOAD] Could not fetch excluded_enterprises from Supabase:", err);
+    }
+  }
+
+  state.exclusions = exclusionsMap;
+  updateExcludedBadgeCount();
+  return exclusionsMap;
+}
+
+function isEnterpriseExcluded(entFolderId, entName) {
+  if (!state.exclusions) return false;
+  if (entFolderId && state.exclusions[entFolderId]) return true;
+  const norm = normalizeIdentityKey(entName);
+  if (norm && state.exclusions[`norm_${norm}`]) return true;
+  return false;
+}
+
+function updateExcludedBadgeCount() {
+  const badge = document.getElementById("excluded-count-badge");
+  if (!badge) return;
+  const activeKeys = Object.keys(state.exclusions || {}).filter(k => !k.startsWith("norm_"));
+  const uniqueKeys = new Set(activeKeys.map(k => state.exclusions[k].enterpriseKey || k));
+  badge.textContent = uniqueKeys.size;
+}
+
+async function excludeEnterprise(primaryKey, entName) {
+  if (!primaryKey) return;
+  const normName = normalizeIdentityKey(entName);
+  const nowStr = new Date().toISOString();
+
+  const record = {
+    enterprise_key: primaryKey,
+    enterprise_name: entName || primaryKey,
+    normalized_name: normName,
+    drive_folder_id: primaryKey,
+    active: true,
+    excluded_at: nowStr,
+    excluded_by: localStorage.getItem("yfc_reviewer_name") || "Operational User"
+  };
+
+  const exObj = {
+    enterpriseKey: primaryKey,
+    enterpriseName: entName || primaryKey,
+    normalizedName: normName,
+    driveFolderId: primaryKey,
+    excludedAt: nowStr,
+    active: true
+  };
+
+  state.exclusions[primaryKey] = exObj;
+  if (normName) {
+    state.exclusions[`norm_${normName}`] = exObj;
+  }
+
+  try {
+    localStorage.setItem("yfc_excluded_enterprises", JSON.stringify(state.exclusions));
+  } catch (e) {}
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('excluded_enterprises')
+        .upsert(record, { onConflict: 'enterprise_key' });
+
+      if (error) {
+        console.warn("[EXCLUDE] Supabase exclusion upsert warning:", error);
+      }
+    } catch (e) {
+      console.warn("[EXCLUDE] Supabase exclusion failed:", e);
+    }
+  }
+
+  state.participants = state.participants.filter(p => {
+    const pKey = p.enterpriseFolderId || p.driveFolderId || p.id;
+    return pKey !== primaryKey && p.name !== entName;
+  });
+
+  updateExcludedBadgeCount();
+  applyFiltersAndRender();
+  showToast(`${entName || 'Enterprise'} removed from tracker. Drive files remain untouched. ✓`, "warning");
+}
+
+async function restoreEnterprise(primaryKey) {
+  if (!primaryKey) return;
+  const ex = state.exclusions[primaryKey];
+  const entName = ex ? ex.enterpriseName : primaryKey;
+
+  delete state.exclusions[primaryKey];
+  if (ex && ex.normalizedName) {
+    delete state.exclusions[`norm_${ex.normalizedName}`];
+  }
+
+  try {
+    localStorage.setItem("yfc_excluded_enterprises", JSON.stringify(state.exclusions));
+  } catch (e) {}
+
+  if (supabaseClient) {
+    try {
+      const { error } = await supabaseClient
+        .from('excluded_enterprises')
+        .update({ active: false, updated_at: new Date().toISOString() })
+        .eq('enterprise_key', primaryKey);
+
+      if (error) {
+        console.warn("[RESTORE] Supabase exclusion restore warning:", error);
+      }
+    } catch (e) {
+      console.warn("[RESTORE] Supabase exclusion restore failed:", e);
+    }
+  }
+
+  updateExcludedBadgeCount();
+  showToast(`${entName} restored! It will be included in the next Google Drive scan. ✓`, "success");
+  
+  fetchData();
+}
+
+function renderExcludedListModal() {
+  const container = document.getElementById("excluded-list-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const keys = Object.keys(state.exclusions || {}).filter(k => !k.startsWith("norm_"));
+  const uniqueItemsMap = {};
+  keys.forEach(k => {
+    const item = state.exclusions[k];
+    if (item && item.enterpriseKey) {
+      uniqueItemsMap[item.enterpriseKey] = item;
+    }
+  });
+
+  const uniqueItems = Object.values(uniqueItemsMap);
+
+  if (uniqueItems.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:24px; color:#94a3b8; font-size:0.85rem;">No enterprises are currently excluded.</div>`;
+    return;
+  }
+
+  uniqueItems.forEach(item => {
+    const dateStr = item.excludedAt ? new Date(item.excludedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently";
+
+    const div = document.createElement("div");
+    div.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:#1f2937; padding:10px 14px; border-radius:6px; border:1px solid #374151;";
+    div.innerHTML = `
+      <div>
+        <div style="font-weight:700; color:#f8fafc; font-size:0.875rem;">${escapeHtml(item.enterpriseName)}</div>
+        <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Removed ${escapeHtml(dateStr)} • Folder ID: <code style="font-size:0.7rem; color:#cbd5e1;">${escapeHtml(item.driveFolderId || item.enterpriseKey)}</code></div>
+      </div>
+      <button class="btn btn-secondary btn-sm btn-restore-item" data-key="${escapeHtml(item.enterpriseKey)}" style="color:#34d399; border-color:#065f46; background:rgba(16, 185, 129, 0.1);">
+        Restore
+      </button>
+    `;
+
+    div.querySelector(".btn-restore-item").addEventListener("click", async (e) => {
+      const keyToRestore = e.currentTarget.dataset.key;
+      await restoreEnterprise(keyToRestore);
+      renderExcludedListModal();
+    });
+
+    container.appendChild(div);
+  });
+}
+
+function closeRemoveEnterpriseModal() {
+  const modal = document.getElementById("modal-confirm-remove-overlay");
+  if (modal) modal.classList.add("hidden");
+  state.pendingRemovalEnterprise = null;
+}
+
+function closeExcludedListModal() {
+  const modal = document.getElementById("modal-excluded-list-overlay");
+  if (modal) modal.classList.add("hidden");
+}
+
 async function fetchScanResultsFromSupabase(identityMap) {
   if (!supabaseClient) return null;
   try {
@@ -320,6 +536,9 @@ async function fetchData() {
   // Build identity resolution map from data.json
   const identityMap = buildDataJsonIdentityMap(localDataset);
 
+  // Load persistent exclusions from Supabase & localStorage
+  await fetchExclusionsFromSupabase(identityMap);
+
   // Load live scan results from Supabase with identity resolution
   const cloudScanMap = await fetchScanResultsFromSupabase(identityMap);
 
@@ -337,13 +556,20 @@ async function fetchData() {
   if (cloudScanMap && Object.keys(cloudScanMap).length > 0) {
     Object.keys(cloudScanMap).forEach(folderKey => {
       const entScan = cloudScanMap[folderKey];
+      const entName = entScan._enterpriseName || formatEnterpriseNameFromId(folderKey);
+
+      if (isEnterpriseExcluded(folderKey, entName)) {
+        console.log(`[EXCLUSION] Skipping excluded enterprise in dashboard load: ${entName} (${folderKey})`);
+        return;
+      }
+
       const firstReqKey = Object.keys(CANONICAL_REQUIREMENTS).find(k => entScan[k]);
       const sampleReq = firstReqKey ? entScan[firstReqKey] : null;
 
       participantsMap[folderKey] = {
         enterpriseFolderId: folderKey,
         id: entScan._enterpriseId || folderKey,
-        name: entScan._enterpriseName || formatEnterpriseNameFromId(folderKey),
+        name: entName,
         applicantType: entScan._applicantType || "INDIVIDUAL",
         typeConfidence: sampleReq ? (sampleReq.typeConfidence || 0) : 0,
         typeEvidence: sampleReq ? (sampleReq.typeEvidence || []) : [],
@@ -374,6 +600,9 @@ async function fetchData() {
   if (localDataset && localDataset.participants) {
     localDataset.participants.forEach(p => {
       const primaryKey = resolveFolderKey(p.enterpriseFolderId || p.driveFolderId, p.id, p.name, identityMap) || p.id;
+      if (isEnterpriseExcluded(primaryKey, p.name)) {
+        return;
+      }
       if (!participantsMap[primaryKey]) {
         participantsMap[primaryKey] = JSON.parse(JSON.stringify(p));
         participantsMap[primaryKey].enterpriseFolderId = primaryKey;
@@ -1973,8 +2202,62 @@ function initEventListeners() {
       closeScanErrorModal();
       closeScanSuccessModal();
       closeSummaryPreviewModal();
+      closeRemoveEnterpriseModal();
+      closeExcludedListModal();
     }
   });
+
+  // Remove Enterprise Drawer Action & Modal Listeners
+  const btnRemoveDrawer = document.getElementById("btn-remove-enterprise-drawer");
+  if (btnRemoveDrawer) {
+    btnRemoveDrawer.addEventListener("click", () => {
+      const p = state.participants.find(x => (x.enterpriseFolderId === state.selectedParticipantId || x.driveFolderId === state.selectedParticipantId || x.id === state.selectedParticipantId));
+      if (!p) return;
+      state.pendingRemovalEnterprise = p;
+      const elTitle = document.getElementById("remove-modal-ent-title");
+      if (elTitle) elTitle.textContent = p.name;
+      const elName = document.getElementById("remove-modal-ent-name");
+      if (elName) elName.textContent = p.name;
+      document.getElementById("modal-confirm-remove-overlay").classList.remove("hidden");
+    });
+  }
+
+  const btnCloseRemoveModal = document.getElementById("btn-close-remove-modal");
+  if (btnCloseRemoveModal) btnCloseRemoveModal.addEventListener("click", closeRemoveEnterpriseModal);
+  const btnCancelRemove = document.getElementById("btn-cancel-remove");
+  if (btnCancelRemove) btnCancelRemove.addEventListener("click", closeRemoveEnterpriseModal);
+  const removeOverlay = document.getElementById("modal-confirm-remove-overlay");
+  if (removeOverlay) removeOverlay.addEventListener("click", (e) => { if (e.target.id === "modal-confirm-remove-overlay") closeRemoveEnterpriseModal(); });
+
+  const btnConfirmRemove = document.getElementById("btn-confirm-remove-enterprise");
+  if (btnConfirmRemove) {
+    btnConfirmRemove.addEventListener("click", async () => {
+      if (state.pendingRemovalEnterprise) {
+        const ent = state.pendingRemovalEnterprise;
+        const primaryKey = ent.enterpriseFolderId || ent.driveFolderId || ent.id;
+        closeRemoveEnterpriseModal();
+        closeDrawer();
+        await excludeEnterprise(primaryKey, ent.name);
+        state.pendingRemovalEnterprise = null;
+      }
+    });
+  }
+
+  // Excluded Enterprises List Modal Listeners
+  const btnOpenExcluded = document.getElementById("btn-open-excluded-modal");
+  if (btnOpenExcluded) {
+    btnOpenExcluded.addEventListener("click", () => {
+      renderExcludedListModal();
+      document.getElementById("modal-excluded-list-overlay").classList.remove("hidden");
+    });
+  }
+
+  const btnCloseExcludedModal = document.getElementById("btn-close-excluded-modal");
+  if (btnCloseExcludedModal) btnCloseExcludedModal.addEventListener("click", closeExcludedListModal);
+  const btnDoneExcluded = document.getElementById("btn-done-excluded");
+  if (btnDoneExcluded) btnDoneExcluded.addEventListener("click", closeExcludedListModal);
+  const excludedOverlay = document.getElementById("modal-excluded-list-overlay");
+  if (excludedOverlay) excludedOverlay.addEventListener("click", (e) => { if (e.target.id === "modal-excluded-list-overlay") closeExcludedListModal(); });
 
   document.getElementById("btn-doc-approve").addEventListener("click", () => {
     if (state.selectedParticipantId && state.selectedDocId) {

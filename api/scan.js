@@ -252,6 +252,38 @@ module.exports = async (req, res) => {
 
     foldersFound = gdriveFolders.length;
 
+    // Fetch active excluded enterprises from Supabase
+    let excludedCount = 0;
+    const excludedSet = new Set();
+    try {
+      const { data: excludedData } = await supabase
+        .from('excluded_enterprises')
+        .select('*')
+        .eq('active', true);
+
+      (excludedData || []).forEach(ex => {
+        if (ex.enterprise_key) excludedSet.add(ex.enterprise_key);
+        if (ex.drive_folder_id) excludedSet.add(ex.drive_folder_id);
+        if (ex.normalized_name) excludedSet.add(ex.normalized_name);
+        if (ex.enterprise_name) excludedSet.add(normalizeNameForComparison(ex.enterprise_name));
+      });
+    } catch (exErr) {
+      console.warn("[SCAN] Could not fetch excluded_enterprises:", exErr.message);
+    }
+
+    const activeGdriveFolders = gdriveFolders.filter(f => {
+      const norm = normalizeNameForComparison(f.name);
+      const entId = deriveEnterpriseId(f.name);
+      const isExcluded = excludedSet.has(f.id) || excludedSet.has(norm) || excludedSet.has(entId);
+      if (isExcluded) {
+        excludedCount++;
+        console.log(`[SCAN] [${jobId}] Skipping excluded enterprise: ${f.name} (${f.id})`);
+      }
+      return !isExcluded;
+    });
+
+    gdriveFolders = activeGdriveFolders;
+
     if (foldersFound === 0) {
       const errInfo = classifyGoogleError(new Error(`Google Drive root folder query returned 0 folders for master ID ${MASTER_FOLDER_ID}`));
       console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errInfo.message}`);
