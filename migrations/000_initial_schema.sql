@@ -1,19 +1,17 @@
 -- ============================================================================
--- Supabase Schema for Unofficial YFC Participant Requirements Tracker
--- Stable Enterprise Identity Model: Google Drive Folder ID = Primary Enterprise Identity
--- 1. public.human_reviews: Current/latest decision per enterprise + requirement.
--- 2. public.human_review_history: Immutable audit log of every review action.
--- 3. public.scan_results: Automated Google Drive scanner outputs keyed by enterprise_folder_id + requirement_id.
--- 4. public.scan_jobs: Online scan job status tracking for dashboard UI polling & diagnostics.
---
--- MIGRATION NOTES:
--- The canonical enterprise identity is enterprise_folder_id (Google Drive Folder ID).
--- enterprise_id (slug) is a secondary/legacy field and MUST NOT be used as a uniqueness key.
--- All NEW constraints use enterprise_folder_id as the primary identity.
--- See migrations/000_initial_schema.sql for the authoritative idempotent migration.
+-- COMPLETE INITIAL SCHEMA MIGRATION
+-- Unofficial YFC Participant Requirements Tracker
+-- ============================================================================
+-- This migration is IDEMPOTENT: safe to run multiple times.
+-- Uses CREATE TABLE IF NOT EXISTS, CREATE INDEX IF NOT EXISTS, etc.
 -- ============================================================================
 
--- Table 1: Current/Latest Human Review Decisions
+-- ============================================================================
+-- TABLE 1: human_reviews
+-- Stores the current/latest manual review decision per enterprise + requirement.
+-- Canonical identity: enterprise_folder_id (real Google Drive folder ID).
+-- UPSERT target: UNIQUE(enterprise_folder_id, requirement_id)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.human_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enterprise_folder_id TEXT NOT NULL,
@@ -31,16 +29,25 @@ CREATE TABLE IF NOT EXISTS public.human_reviews (
 
 CREATE INDEX IF NOT EXISTS idx_human_reviews_enterprise ON public.human_reviews(enterprise_id);
 CREATE INDEX IF NOT EXISTS idx_human_reviews_folder ON public.human_reviews(enterprise_folder_id);
+
 ALTER TABLE public.human_reviews ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read access" ON public.human_reviews;
 DROP POLICY IF EXISTS "Allow public write access" ON public.human_reviews;
 
-CREATE POLICY "Allow public read access" ON public.human_reviews FOR SELECT USING (true);
-CREATE POLICY "Allow public write access" ON public.human_reviews FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read access" ON public.human_reviews
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow public write access" ON public.human_reviews
+    FOR ALL USING (true) WITH CHECK (true);
 
 
--- Table 2: Immutable Review History Log (STRICTLY READ & INSERT ONLY)
+-- ============================================================================
+-- TABLE 2: human_review_history
+-- Immutable append-only audit log of every review action.
+-- NEVER update or delete rows from this table.
+-- RLS: SELECT + INSERT only (no UPDATE/DELETE policies).
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.human_review_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enterprise_folder_id TEXT,
@@ -55,18 +62,29 @@ CREATE TABLE IF NOT EXISTS public.human_review_history (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_human_review_history_ent_req ON public.human_review_history(enterprise_id, requirement_id);
-CREATE INDEX IF NOT EXISTS idx_human_review_history_folder ON public.human_review_history(enterprise_folder_id);
+CREATE INDEX IF NOT EXISTS idx_human_review_history_ent_req
+    ON public.human_review_history(enterprise_id, requirement_id);
+CREATE INDEX IF NOT EXISTS idx_human_review_history_folder
+    ON public.human_review_history(enterprise_folder_id);
+
 ALTER TABLE public.human_review_history ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read history" ON public.human_review_history;
 DROP POLICY IF EXISTS "Allow public insert history" ON public.human_review_history;
 
-CREATE POLICY "Allow public read history" ON public.human_review_history FOR SELECT USING (true);
-CREATE POLICY "Allow public insert history" ON public.human_review_history FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read history" ON public.human_review_history
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow public insert history" ON public.human_review_history
+    FOR INSERT WITH CHECK (true);
 
 
--- Table 3: Automated Scan Results (Keyed by Google Drive enterprise_folder_id + requirement_id)
+-- ============================================================================
+-- TABLE 3: scan_results
+-- Automated Google Drive scanner outputs.
+-- Canonical identity: enterprise_folder_id (real Google Drive folder ID).
+-- UPSERT target: UNIQUE(enterprise_folder_id, requirement_id)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.scan_results (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     enterprise_folder_id TEXT NOT NULL,
@@ -86,18 +104,27 @@ CREATE TABLE IF NOT EXISTS public.scan_results (
     CONSTRAINT unique_scan_folder_req UNIQUE (enterprise_folder_id, requirement_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_scan_results_folder ON public.scan_results(enterprise_folder_id);
-CREATE INDEX IF NOT EXISTS idx_scan_results_enterprise ON public.scan_results(enterprise_id);
+CREATE INDEX IF NOT EXISTS idx_scan_results_folder
+    ON public.scan_results(enterprise_folder_id);
+CREATE INDEX IF NOT EXISTS idx_scan_results_enterprise
+    ON public.scan_results(enterprise_id);
+
 ALTER TABLE public.scan_results ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read scan results" ON public.scan_results;
 DROP POLICY IF EXISTS "Allow public write scan results" ON public.scan_results;
 
-CREATE POLICY "Allow public read scan results" ON public.scan_results FOR SELECT USING (true);
-CREATE POLICY "Allow public write scan results" ON public.scan_results FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read scan results" ON public.scan_results
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow public write scan results" ON public.scan_results
+    FOR ALL USING (true) WITH CHECK (true);
 
 
--- Table 4: Online Scan Jobs (Status Tracking for Polling & Safe Diagnostics)
+-- ============================================================================
+-- TABLE 4: scan_jobs
+-- Scan job status tracking for dashboard UI polling and diagnostics.
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.scan_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     status TEXT NOT NULL DEFAULT 'QUEUED',
@@ -116,11 +143,16 @@ CREATE TABLE IF NOT EXISTS public.scan_jobs (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON public.scan_jobs(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_scan_jobs_status
+    ON public.scan_jobs(status, created_at);
+
 ALTER TABLE public.scan_jobs ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow public read scan jobs" ON public.scan_jobs;
 DROP POLICY IF EXISTS "Allow public write scan jobs" ON public.scan_jobs;
 
-CREATE POLICY "Allow public read scan jobs" ON public.scan_jobs FOR SELECT USING (true);
-CREATE POLICY "Allow public write scan jobs" ON public.scan_jobs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read scan jobs" ON public.scan_jobs
+    FOR SELECT USING (true);
+
+CREATE POLICY "Allow public write scan jobs" ON public.scan_jobs
+    FOR ALL USING (true) WITH CHECK (true);

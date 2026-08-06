@@ -103,26 +103,38 @@ function initSupabaseClient() {
   const supabaseUrl = window.SUPABASE_URL || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_URL : null) || "https://gndnmbdzfoamtgjkvnyr.supabase.co";
   const supabaseKey = window.SUPABASE_ANON_KEY || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_ANON_KEY : null) || "sb_publishable_zojIDwrTmNXHQLWuOhm7yQ_2pIvgypM";
 
+  console.log("[INIT] initSupabaseClient called");
+  console.log("[INIT] window.SUPABASE_URL:", window.SUPABASE_URL || "(not set)");
+  console.log("[INIT] window.SUPABASE_ANON_KEY:", window.SUPABASE_ANON_KEY ? "(set, length=" + window.SUPABASE_ANON_KEY.length + ")" : "(not set)");
+  console.log("[INIT] window.supabase exists:", !!window.supabase);
+  console.log("[INIT] supabaseUrl:", supabaseUrl ? supabaseUrl.substring(0, 40) + "..." : "(empty)");
+  console.log("[INIT] supabaseKey exists:", !!supabaseKey, "length:", supabaseKey ? supabaseKey.length : 0);
+
   const dot = document.getElementById("supabase-status-dot");
   const label = document.getElementById("supabase-status-label");
 
   if (window.supabase && supabaseUrl && supabaseKey && !supabaseUrl.includes("your-supabase-project")) {
     try {
       supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+      console.log("[INIT] Supabase client created successfully. supabaseClient is now:", !!supabaseClient);
       if (dot && label) {
         dot.style.backgroundColor = "#10b981";
         label.textContent = "Supabase Synced";
       }
-      console.log("Supabase client initialized successfully.");
     } catch (e) {
-      console.warn("Failed to initialize Supabase client:", e);
+      console.error("[INIT] Failed to initialize Supabase client:", e);
     }
   } else {
+    console.warn("[INIT] Supabase NOT initialized. Conditions:", {
+      window_supabase: !!window.supabase,
+      supabaseUrl: !!supabaseUrl,
+      supabaseKey: !!supabaseKey,
+      notPlaceholder: !supabaseUrl.includes("your-supabase-project")
+    });
     if (dot && label) {
       dot.style.backgroundColor = "#f59e0b";
       label.textContent = "Local Storage Mode";
     }
-    console.log("Supabase not configured. Using local storage review persistence mode.");
   }
 }
 
@@ -148,6 +160,7 @@ function saveLocalOverrides() {
 }
 
 async function fetchHumanReviewsFromSupabase(identityMap) {
+  console.log("[LOAD] fetchHumanReviewsFromSupabase called, supabaseClient exists:", !!supabaseClient);
   if (!supabaseClient) return null;
   try {
     const { data, error } = await supabaseClient
@@ -155,13 +168,22 @@ async function fetchHumanReviewsFromSupabase(identityMap) {
       .select('*');
     
     if (error) {
-      console.warn("Supabase select error:", error);
+      console.warn("[LOAD] Supabase select error:", error);
       return null;
     }
 
+    console.log("[LOAD] human_reviews fetched:", (data || []).length, "rows");
     const reviewsMap = {};
     (data || []).forEach(row => {
       const entKey = resolveFolderKey(row.enterprise_folder_id, row.enterprise_id, null, identityMap || { byId: {}, byName: {}, byFolderId: {} });
+      console.log("[LOAD]   Review:", {
+        enterprise_folder_id: row.enterprise_folder_id,
+        enterprise_id: row.enterprise_id,
+        resolvedKey: entKey,
+        requirement_id: row.requirement_id,
+        human_status: row.human_status,
+        reviewer_name: row.reviewer_name
+      });
       if (!reviewsMap[entKey]) reviewsMap[entKey] = {};
       reviewsMap[entKey][row.requirement_id] = {
         manualStatus: row.human_status,
@@ -177,11 +199,15 @@ async function fetchHumanReviewsFromSupabase(identityMap) {
       }
     });
 
+    console.log("[LOAD] Reviews map keys:", Object.keys(reviewsMap));
+
     // Also fetch review history logs
     const { data: histData } = await supabaseClient
       .from('human_review_history')
       .select('*')
       .order('created_at', { ascending: false });
+
+    console.log("[LOAD] human_review_history fetched:", (histData || []).length, "rows");
 
     if (histData) {
       const histMap = {};
@@ -211,7 +237,7 @@ async function fetchHumanReviewsFromSupabase(identityMap) {
 
     return reviewsMap;
   } catch (err) {
-    console.warn("Could not fetch human reviews from Supabase:", err);
+    console.warn("[LOAD] Could not fetch human reviews from Supabase:", err);
     return null;
   }
 }
@@ -366,12 +392,17 @@ function processDataset(raw) {
 
     const activeOverrides = state.overrides[entKey] || state.overrides[copy.id];
     if (activeOverrides) {
+      console.log("[MERGE] Applying overrides for", copy.name, "entKey:", entKey, "overrideKeys:", Object.keys(activeOverrides));
       Object.keys(activeOverrides).forEach(docKey => {
         if (copy.requirements[docKey]) {
+          const oldStatus = copy.requirements[docKey].status;
           copy.requirements[docKey].review = activeOverrides[docKey];
           if (activeOverrides[docKey].manualStatus) {
             copy.requirements[docKey].status = activeOverrides[docKey].manualStatus;
+            console.log("[MERGE]   Override", docKey, ":", oldStatus, "->", activeOverrides[docKey].manualStatus);
           }
+        } else {
+          console.log("[MERGE]   Override key", docKey, "not found in requirements for", copy.name);
         }
       });
     }
@@ -949,10 +980,22 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
   saveLocalOverrides();
 
   // 2. Persist to Supabase (upsert latest decision + insert immutable history log)
+  console.log("[PERSISTENCE] setDocOverride called:", {
+    enterpriseName: p.name,
+    enterprise_folder_id: primaryFolderId,
+    enterprise_id: p.id,
+    requirement_id: docKey,
+    human_status: humanStatus,
+    reviewer_name: reviewerName,
+    supabaseClient_exists: !!supabaseClient,
+    supabaseClient_type: supabaseClient ? typeof supabaseClient.from : "null"
+  });
+
   if (supabaseClient) {
     try {
       // Upsert current decision using enterprise_folder_id + requirement_id
-      await supabaseClient
+      console.log("[PERSISTENCE] Attempting UPSERT to human_reviews...");
+      const upsertResult = await supabaseClient
         .from('human_reviews')
         .upsert({
           enterprise_folder_id: primaryFolderId,
@@ -964,10 +1007,22 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
           reviewer_name: reviewerName,
           reviewer_notes: note,
           updated_at: new Date().toISOString()
-        }, { onConflict: 'enterprise_folder_id,requirement_id' });
+        }, { onConflict: 'enterprise_id,requirement_id' });
+
+      console.log("[PERSISTENCE] UPSERT result:", {
+        data: upsertResult.data,
+        error: upsertResult.error,
+        status: upsertResult.status,
+        statusText: upsertResult.statusText
+      });
+
+      if (upsertResult.error) {
+        console.error("[PERSISTENCE] UPSERT ERROR:", upsertResult.error);
+      }
 
       // Insert immutable audit history record
-      await supabaseClient
+      console.log("[PERSISTENCE] Attempting INSERT to human_review_history...");
+      const histResult = await supabaseClient
         .from('human_review_history')
         .insert({
           enterprise_folder_id: primaryFolderId,
@@ -981,12 +1036,24 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
           created_at: new Date().toISOString()
         });
 
-      showToast(`Review decision & audit history saved to Supabase! ✓ (Reviewer: ${reviewerName})`, "success");
+      console.log("[PERSISTENCE] HISTORY INSERT result:", {
+        data: histResult.data,
+        error: histResult.error,
+        status: histResult.status
+      });
+
+      if (histResult.error) {
+        console.error("[PERSISTENCE] HISTORY INSERT ERROR:", histResult.error);
+        showToast(`Saved locally (history insert failed: ${histResult.error.message})`, "error");
+      } else {
+        showToast(`Review decision & audit history saved to Supabase! ✓ (Reviewer: ${reviewerName})`, "success");
+      }
     } catch (err) {
-      console.error("Supabase execution error:", err);
+      console.error("[PERSISTENCE] Supabase execution error:", err);
       showToast("Saved locally (Supabase sync failed)", "info");
     }
   } else {
+    console.warn("[PERSISTENCE] supabaseClient is NULL - cannot persist to Supabase");
     showToast(`Decision saved locally ✓ (Entered by: ${reviewerName})`, "info");
   }
 
@@ -1031,6 +1098,15 @@ async function triggerCloudDriveScan() {
     if (!data.success && data.error && !data.jobId) {
       showToast(`Scan Trigger Failed: ${data.error}`, "error");
       resetScanUI("Scan failed");
+      return;
+    }
+
+    // Handle immediate FAILED response (e.g., Google Drive credentials missing)
+    if (data.status === "FAILED") {
+      state.isScanning = false;
+      if (btnScan) btnScan.disabled = false;
+      resetScanUI("Scan failed");
+      showToast(`Scan Failed: ${data.error || 'Google Drive scanner unavailable'}`, "error");
       return;
     }
 
@@ -1106,8 +1182,11 @@ function startScanStatusPolling(jobId) {
       } else if (data.status === 'FAILED') {
         clearInterval(state.scanPollInterval);
         state.scanPollInterval = null;
+        state.isScanning = false;
+        const btnScan = document.getElementById("btn-scan");
+        if (btnScan) btnScan.disabled = false;
         resetScanUI("Scan failed");
-        showToast(`Scan Failed: ${data.error || 'Unknown server error'}`, "error");
+        showToast(`Scan Failed: ${data.error || 'Google Drive scanner unavailable. No changes were made.'}`, "error");
       } else if (data.status === 'NO_JOB_FOUND') {
         clearInterval(state.scanPollInterval);
         state.scanPollInterval = null;

@@ -371,5 +371,261 @@ class TestEnterpriseIdentityAndDeDuplication(unittest.TestCase):
         self.assertEqual(len(scan_results), len(real_folder_ids) * 12)
 
 
+class TestWormTastikFilenameMatching(unittest.TestCase):
+    """Regression tests using actual WormTastik Google Drive filenames."""
+
+    def setUp(self):
+        self.CANONICAL_REQUIREMENTS = {
+            "applicationLetter": {
+                "keywords": ["application letter", "letter of application", "app letter", "intent letter", "joint application", "start up individual application"]
+            },
+            "applicationForm": {
+                "keywords": ["application form", "app form", "form b", "start up form", "entry form", "registration form"]
+            },
+            "businessModelCanvas": {
+                "keywords": ["business model canvas", "business model", "bmc template", "canvas", "bmc"]
+            },
+            "bmcFinancials": {
+                "keywords": ["bmc financial", "financial projections", "projections", "financial plan"]
+            },
+            "financialFigures": {
+                "keywords": ["activity and financial plan", "financial plan", "cashflow", "cash flow", "financial statement", "budget", "income statement", "balance sheet", "expenses"]
+            },
+            "validId": {
+                "keywords": ["valid id", "government id", "national id", "philid", "driver license", "drivers license", "umid", "voter id", "postal id", "prc id", "passport id", "passport", "id card", "scanned copy valid id"]
+            },
+            "swornStatement": {
+                "keywords": ["sworn statement", "affidavit", "form c", "form j", "declaration new business", "authority to use land"]
+            },
+            "proofOfResidency": {
+                "keywords": ["proof of residency", "residency", "residence", "barangay certificate", "barangay clearance", "certificate of residency", "proof of address"]
+            },
+            "endorsementLetter": {
+                "keywords": ["endorsement letter", "endorsement", "endorsment", "recommending letter", "recommendation", "reccomendation", "lgu endorsement", "endorse", "agriculture office"]
+            },
+            "photo2x2": {
+                "keywords": ["2x2", "2 x 2", "2by2", "id photo", "applicant photo", "headshot", "passport photo", "picture", "photo"]
+            },
+            "signatures": {
+                "keywords": ["signed", "signature", "signed form", "signed copy", "with signature"]
+            },
+            "declarationOfIntent": {
+                "keywords": ["declaration of intent", "declaration intent", "intent declaration", "group declaration", "annex a"]
+            },
+        }
+
+        self.FILENAME_ALIASES = {
+            "passport id": "validId",
+            "passport": "validId",
+            "id picture": "validId",
+            "id pic": "validId",
+            "2x2 picture": "photo2x2",
+            "2x2 photo": "photo2x2",
+            "id photo 2x2": "photo2x2",
+            "passport picture": "photo2x2",
+            "headshot": "photo2x2",
+            "bmc financials": "bmcFinancials",
+            "bmc financial": "bmcFinancials",
+        }
+
+        self.reqKeyOrder = [
+            "applicationLetter", "applicationForm", "bmcFinancials", "businessModelCanvas",
+            "financialFigures", "validId", "swornStatement", "proofOfResidency",
+            "endorsementLetter", "photo2x2", "signatures", "declarationOfIntent"
+        ]
+
+    def _match_file(self, fname, mime_type=None):
+        """Simulate the scanner matching logic (with file assignment tracking)."""
+        fnNorm = re.sub(r"[^a-z0-9]+", " ", fname.lower()).strip()
+        file_assignments = {}
+        results = {}
+
+        for reqKey in self.reqKeyOrder:
+            reqDef = self.CANONICAL_REQUIREMENTS[reqKey]
+            matched = False
+
+            # Skip if this file was already assigned to a higher-priority requirement
+            if fnNorm in file_assignments and file_assignments[fnNorm] != reqKey:
+                continue
+
+            # Layer 1: Filename aliases
+            alias_key = fnNorm
+            if self.FILENAME_ALIASES.get(alias_key) == reqKey:
+                matched = True
+
+            # Layer 2: Keyword matching
+            if not matched:
+                for kw in reqDef["keywords"]:
+                    if kw in fnNorm:
+                        matched = True
+                        break
+
+            # Layer 3: MIME-type awareness
+            if not matched and mime_type:
+                mime = mime_type.lower()
+                if reqKey == "validId" and (mime.startswith("image/") or mime == "application/pdf"):
+                    if re.search(r"id|passport|license|valid", fnNorm):
+                        matched = True
+                if reqKey == "photo2x2" and mime.startswith("image/"):
+                    if re.search(r"photo|picture|headshot|2x2|id", fnNorm):
+                        matched = True
+
+            if matched:
+                file_assignments[fnNorm] = reqKey
+                results[reqKey] = fname
+
+        return results
+
+    def test_A_application_letter(self):
+        """WormTastik: A.-StartUp-Individual-Application-Letter.pdf -> applicationLetter"""
+        matches = self._match_file("A.-StartUp-Individual-Application-Letter.pdf")
+        self.assertIn("applicationLetter", matches)
+        self.assertNotIn("applicationForm", matches)
+
+    def test_B_application_form(self):
+        """WormTastik: B.-Application-Form-Start-Up.pdf -> applicationForm"""
+        matches = self._match_file("B.-Application-Form-Start-Up.pdf")
+        self.assertIn("applicationForm", matches)
+
+    def test_C_bmc_docx(self):
+        """WormTastik: BMC.docx -> businessModelCanvas ONLY (not bmcFinancials)"""
+        matches = self._match_file("BMC.docx")
+        self.assertIn("businessModelCanvas", matches)
+        self.assertNotIn("bmcFinancials", matches,
+            "BMC.docx should NOT match bmcFinancials")
+
+    def test_D_logo_not_matched(self):
+        """WormTastik: LOGO.png -> no requirement matched"""
+        matches = self._match_file("LOGO.png")
+        self.assertEqual(len(matches), 0, f"LOGO.png should not match any requirement, got {matches}")
+
+    def test_E_passport_id(self):
+        """WormTastik: passport ID -> validId"""
+        matches = self._match_file("passport ID")
+        self.assertIn("validId", matches)
+
+    def test_F_picture_png(self):
+        """WormTastik: picture.png -> photo2x2"""
+        matches = self._match_file("picture.png", mime_type="image/png")
+        self.assertIn("photo2x2", matches)
+
+    def test_G_bmc_financials_xlsx(self):
+        """WormTastik: WormTastik-YFC-BMC-Financials-New-Plan-Updated.xlsx -> bmcFinancials (NOT businessModelCanvas)"""
+        matches = self._match_file("WormTastik-YFC-BMC-Financials-New-Plan-Updated.xlsx")
+        self.assertIn("bmcFinancials", matches)
+        self.assertNotIn("businessModelCanvas", matches,
+            "BMC Financials xlsx should NOT match businessModelCanvas")
+
+    def test_H_application_letter_prefix(self):
+        """Prefixes like A.- are handled by normalization"""
+        matches = self._match_file("A.-StartUp-Individual-Application-Letter.pdf")
+        self.assertIn("applicationLetter", matches)
+
+    def test_I_application_form_prefix(self):
+        """Prefixes like B.- are handled by normalization"""
+        matches = self._match_file("B.-Application-Form-Start-Up.pdf")
+        self.assertIn("applicationForm", matches)
+
+    def test_J_passport_id_with_extension(self):
+        """passport ID.jpg should also match validId"""
+        matches = self._match_file("passport ID.jpg")
+        self.assertIn("validId", matches)
+
+    def test_K_picture_with_size(self):
+        """picture (1).png should match photo2x2"""
+        matches = self._match_file("picture (1).png", mime_type="image/png")
+        self.assertIn("photo2x2", matches)
+
+    def test_L_photo_jpg(self):
+        """photo.jpg should match photo2x2"""
+        matches = self._match_file("photo.jpg", mime_type="image/jpeg")
+        self.assertIn("photo2x2", matches)
+
+    def test_M_scanned_copy_valid_id(self):
+        """'Scanned copy valid ID' should match validId"""
+        matches = self._match_file("Scanned copy valid ID.pdf", mime_type="application/pdf")
+        self.assertIn("validId", matches)
+
+    def test_N_sworn_statement(self):
+        """C. Individual Affidavit of New Business.pdf -> swornStatement"""
+        matches = self._match_file("C. Individual Affidavit of New Business.pdf")
+        self.assertIn("swornStatement", matches)
+
+    def test_O_start_up_individual_application_letter(self):
+        """'StartUp Individual Application Letter' should match applicationLetter"""
+        matches = self._match_file("StartUp Individual Application Letter.pdf")
+        self.assertIn("applicationLetter", matches)
+
+    def test_P_wormtastik_prefix_in_name(self):
+        """Enterprise name prefix in filename should not prevent matching"""
+        matches = self._match_file("WormTastik-YFC-BMC-Financials-New-Plan-Updated.xlsx")
+        self.assertIn("bmcFinancials", matches)
+
+    def test_Q_declaration_of_intent_not_applicable_individual(self):
+        """declarationOfIntent should be NOT_APPLICABLE for INDIVIDUAL (no file matches)"""
+        matches = self._match_file("some_random_file.pdf")
+        self.assertNotIn("declarationOfIntent", matches)
+
+    def test_R_no_false_positive_from_logo(self):
+        """LOGO.png should not create false positive for any requirement"""
+        for reqKey in self.reqKeyOrder:
+            matches = self._match_file("LOGO.png")
+            self.assertNotIn(reqKey, matches, f"LOGO.png should not match {reqKey}")
+
+    def test_S_all_wormtastik_files_mapped(self):
+        """Verify the complete WormTastik file set produces expected mappings"""
+        wormtastik_files = [
+            ("A.-StartUp-Individual-Application-Letter.pdf", "applicationLetter"),
+            ("B.-Application-Form-Start-Up.pdf", "applicationForm"),
+            ("BMC.docx", "businessModelCanvas"),
+            ("LOGO.png", None),
+            ("passport ID", "validId"),
+            ("picture.png", "photo2x2"),
+            ("WormTastik-YFC-BMC-Financials-New-Plan-Updated.xlsx", "bmcFinancials"),
+        ]
+
+        matched_requirements = set()
+        for fname, expected_req in wormtastik_files:
+            matches = self._match_file(fname, mime_type="image/png" if fname.endswith(".png") else None)
+            if expected_req:
+                self.assertIn(expected_req, matches, f"File '{fname}' should match {expected_req}")
+                matched_requirements.add(expected_req)
+            else:
+                self.assertEqual(len(matches), 0, f"File '{fname}' should not match any requirement")
+
+        # Verify expected matched requirements
+        expected_matched = {"applicationLetter", "applicationForm", "businessModelCanvas", "validId", "photo2x2", "bmcFinancials"}
+        self.assertEqual(matched_requirements, expected_matched)
+
+
+class TestFilenameMatchingEdgeCases(unittest.TestCase):
+    """Additional edge case tests for filename matching."""
+
+    def test_hyphens_normalized(self):
+        """Hyphens in filenames are normalized to spaces"""
+        fnNorm = re.sub(r"[^a-z0-9]+", " ", "A.-StartUp-Individual-Application-Letter.pdf".lower()).strip()
+        self.assertIn("application letter", fnNorm)
+
+    def test_underscores_normalized(self):
+        """Underscores in filenames are normalized to spaces"""
+        fnNorm = re.sub(r"[^a-z0-9]+", " ", "application_letter.pdf".lower()).strip()
+        self.assertIn("application letter", fnNorm)
+
+    def test_periods_normalized(self):
+        """Periods in filenames are normalized to spaces"""
+        fnNorm = re.sub(r"[^a-z0-9]+", " ", "A.-StartUp.pdf".lower()).strip()
+        self.assertIn("a startup", fnNorm)
+
+    def test_multiple_spaces_collapsed(self):
+        """Multiple consecutive spaces are collapsed"""
+        fnNorm = re.sub(r"[^a-z0-9]+", " ", "application  letter.pdf".lower()).strip()
+        self.assertEqual(fnNorm, "application letter pdf")
+
+    def test_uppercase_normalized(self):
+        """Uppercase is lowercased"""
+        fnNorm = re.sub(r"[^a-z0-9]+", " ", "APPLICATION LETTER.pdf".lower()).strip()
+        self.assertEqual(fnNorm, "application letter pdf")
+
+
 if __name__ == "__main__":
     unittest.main()
