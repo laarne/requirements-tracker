@@ -1218,14 +1218,18 @@ function renderTable() {
 function toggleRowDropdownMenu(btn, primaryKey, name) {
   document.querySelectorAll(".row-dropdown-menu").forEach(m => m.remove());
 
+  const rect = btn.getBoundingClientRect();
   const menu = document.createElement("div");
   menu.className = "row-dropdown-menu";
+  const leftPos = Math.max(10, Math.min(rect.left, window.innerWidth - 200));
+  menu.style.cssText = `position: fixed; top: ${rect.bottom + 4}px; left: ${leftPos}px; z-index: 99999; width: 190px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6); padding: 4px 0;`;
+
   menu.innerHTML = `
-    <button class="btn-menu-change-type">
+    <button class="btn-menu-change-type" style="width:100%; display:flex; align-items:center; gap:8px; padding:8px 12px; background:none; border:none; color:#f8fafc; font-size:0.8rem; cursor:pointer; text-align:left;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
       Change applicant type
     </button>
-    <button class="btn-menu-remove-ent" style="color:#f87171;">
+    <button class="btn-menu-remove-ent" style="width:100%; display:flex; align-items:center; gap:8px; padding:8px 12px; background:none; border:none; color:#f87171; font-size:0.8rem; cursor:pointer; text-align:left;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       Remove from tracker
     </button>
@@ -1240,7 +1244,7 @@ function toggleRowDropdownMenu(btn, primaryKey, name) {
   menu.querySelector(".btn-menu-remove-ent").addEventListener("click", (e) => {
     e.stopPropagation();
     menu.remove();
-    const p = state.participants.find(x => (x.enterpriseFolderId === primaryKey || x.driveFolderId === primaryKey || x.id === primaryKey));
+    const p = findParticipant(primaryKey);
     if (p) {
       state.pendingRemovalEnterprise = p;
       const elTitle = document.getElementById("remove-modal-ent-title");
@@ -1251,7 +1255,7 @@ function toggleRowDropdownMenu(btn, primaryKey, name) {
     }
   });
 
-  btn.parentElement.appendChild(menu);
+  document.body.appendChild(menu);
 
   const closeMenuHandler = (e) => {
     if (!menu.contains(e.target) && e.target !== btn) {
@@ -1335,10 +1339,25 @@ function openDrawer(participantId) {
     typeDisplay = `<span class="app-type-unset">Applicant type not set</span> <button class="btn-more-options btn-header-edit-type" data-id="${primaryFolderId}" title="Set applicant type" aria-label="Set applicant type">⋯</button>`;
   }
   document.getElementById("drawer-applicant-type").innerHTML = typeDisplay;
-  document.getElementById("drawer-applicant-type").querySelector(".btn-header-edit-type")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openChangeAppTypeModal(primaryFolderId);
-  });
+  const btnHeaderEdit = document.getElementById("drawer-applicant-type").querySelector(".btn-header-edit-type");
+  if (btnHeaderEdit) {
+    btnHeaderEdit.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      toggleRowDropdownMenu(btnHeaderEdit, primaryFolderId, p.name);
+    });
+  }
+
+  const badgeSpan = document.getElementById("drawer-applicant-type").querySelector("span");
+  if (badgeSpan) {
+    badgeSpan.style.cursor = "pointer";
+    badgeSpan.title = "Click to change applicant type";
+    badgeSpan.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      openChangeAppTypeModal(primaryFolderId);
+    });
+  }
 
   document.getElementById("drawer-comp-rate-badge").textContent = `${p.completeCount} of ${p.applicableRequirementsCount} requirements complete`;
 
