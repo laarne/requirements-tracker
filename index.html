@@ -298,6 +298,22 @@
     </div>
 
     <div class="drawer-body">
+      <!-- Case Summary Bar -->
+      <div class="case-summary-bar" id="drawer-case-summary-bar">
+        <div class="case-metric">
+          <span class="case-metric-label">COMPLIANCE</span>
+          <span class="case-metric-val color-accent" id="case-val-compliance">0%</span>
+        </div>
+        <div class="case-metric">
+          <span class="case-metric-label">MEMBERS VERIFIED</span>
+          <span class="case-metric-val" id="case-val-members">—</span>
+        </div>
+        <div class="case-metric">
+          <span class="case-metric-label">OUTSTANDING</span>
+          <span class="case-metric-val color-danger" id="case-val-outstanding">0 reqs</span>
+        </div>
+      </div>
+
       <!-- Deterministic Next Action Banner -->
       <div class="next-action-banner" id="drawer-next-action-banner">
         <div class="next-action-title">NEXT ACTION</div>
@@ -308,7 +324,7 @@
 
       <!-- GROUP MEMBERS SUMMARY SECTION -->
       <div class="drawer-members-section hidden" id="drawer-members-section">
-        <div class="section-title" style="color:#38bdf8; font-size:0.75rem;">MEMBERS</div>
+        <div class="section-title" style="color:#38bdf8; font-size:0.75rem;">GROUP MEMBERS</div>
         <div class="drawer-members-list" id="drawer-members-list">
           <!-- Member summary pills (e.g. MADES ✓ 3/3 | PEPITO ✓ 3/3 | PULI ✓ 3/3) -->
         </div>

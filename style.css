@@ -878,7 +878,7 @@ body.drawer-open {
   position: fixed;
   top: 0;
   right: 0;
-  width: 540px;
+  width: 560px;
   max-width: 100vw;
   height: 100vh;
   background-color: var(--bg-card);
@@ -944,7 +944,41 @@ body.drawer-open {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+}
+
+/* Case Summary Bar */
+.case-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background-color: var(--bg-foundation);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.case-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.case-metric-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.case-metric-val {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 2px;
 }
 
 /* Next Action Banner */

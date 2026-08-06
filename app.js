@@ -995,6 +995,27 @@ function openDrawer(participantId) {
 
   document.getElementById("drawer-subhead-counts").textContent = `${p.missingCount} Missing · ${p.needsReviewCount} Needs Review · ${p.completeCount} Complete`;
 
+  // Case Summary Bar
+  const elCaseComp = document.getElementById("case-val-compliance");
+  if (elCaseComp) elCaseComp.textContent = `${p.completionRate}%`;
+
+  const elCaseMembers = document.getElementById("case-val-members");
+  if (elCaseMembers) {
+    if (p.applicantType === "GROUP" && p.groupMembers && p.groupMembers.length > 0) {
+      const verifiedMembers = p.groupMembers.filter(m => {
+        const memDet = p.memberDetails ? p.memberDetails[m] : null;
+        if (!memDet) return false;
+        return ["validId", "proofOfResidency", "photo2x2"].every(rk => memDet[rk] && (memDet[rk].status === "COMPLETE" || memDet[rk].status === "APPROVED"));
+      }).length;
+      elCaseMembers.textContent = `${verifiedMembers} / ${p.groupMembers.length}`;
+    } else {
+      elCaseMembers.textContent = "N/A";
+    }
+  }
+
+  const elCaseOut = document.getElementById("case-val-outstanding");
+  if (elCaseOut) elCaseOut.textContent = `${p.missingCount} reqs`;
+
   // Next Action HTML
   const elNextAction = document.getElementById("drawer-next-action-text");
   if (elNextAction) elNextAction.innerHTML = generateNextActionString(p);
