@@ -630,43 +630,23 @@ body.drawer-open {
 }
 
 /* --------------------------------------------------------------------------
-   Requirements Health & Action Center Grid
+   Program Requirements Breakdown Analytics
    -------------------------------------------------------------------------- */
-.insights-grid {
-  display: grid;
-  grid-template-columns: 2.1fr 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.insights-left-col {
+.insights-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.insights-right-col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-@media (max-width: 1024px) {
-  .insights-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
 }
 
 .analytics-bars {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px 14px;
+  gap: 8px 24px;
 }
 
 @media (max-width: 768px) {
   .analytics-bars {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 
@@ -696,66 +676,6 @@ body.drawer-open {
 .analytics-pct {
   color: var(--text-muted);
   font-size: 0.725rem;
-}
-
-.action-card {
-  display: flex;
-  flex-direction: column;
-  align-self: start;
-  height: auto;
-  min-height: auto;
-}
-
-.insights-card {
-  display: flex;
-  flex-direction: column;
-  align-self: start;
-  height: auto;
-  min-height: auto;
-}
-
-.action-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.action-stat {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--warning);
-}
-
-.action-subhead {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.action-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-}
-
-.action-list li {
-  font-size: 0.8rem;
-  color: var(--text-main);
-  padding: 8px 12px;
-  min-height: 38px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--bg-foundation);
-  border-radius: var(--radius-sm);
-  border-left: 3px solid var(--warning);
-}
-
-#btn-review-incomplete {
-  margin-top: 4px;
 }
 
 /* --------------------------------------------------------------------------

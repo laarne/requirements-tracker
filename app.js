@@ -1036,7 +1036,6 @@ function applyFiltersAndRender() {
 
   renderKPICards();
   renderAnalyticsBars();
-  renderActionCenter();
   renderTable();
 }
 
@@ -1120,44 +1119,7 @@ function renderAnalyticsBars() {
   });
 }
 
-function renderActionCenter() {
-  const incompleteList = state.participants.filter(p => p.status !== "COMPLETE");
-  const summaryText = document.getElementById("action-summary-text");
-  const issuesList = document.getElementById("action-issues-list");
-  
-  summaryText.textContent = `${incompleteList.length} enterprises require document submission or review follow-up.`;
-  issuesList.innerHTML = "";
 
-  const missingCounts = {};
-  Object.keys(CANONICAL_REQUIREMENTS).forEach(k => missingCounts[k] = 0);
-
-  incompleteList.forEach(p => {
-    Object.keys(CANONICAL_REQUIREMENTS).forEach(k => {
-      const doc = p.requirements[k];
-      if (doc && (doc.status === "MISSING" || doc.status === "REJECTED")) {
-        missingCounts[k]++;
-      }
-    });
-  });
-
-  const sortedIssues = Object.keys(CANONICAL_REQUIREMENTS)
-    .map(k => ({ key: k, count: missingCounts[k], name: CANONICAL_REQUIREMENTS[k] }))
-    .filter(i => i.count > 0)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 4);
-
-  sortedIssues.forEach(issue => {
-    const li = document.createElement("li");
-    li.innerHTML = `<strong>${escapeHtml(issue.name)}</strong> — ${issue.count} missing`;
-    issuesList.appendChild(li);
-  });
-
-  if (issuesList.children.length === 0) {
-    const li = document.createElement("li");
-    li.textContent = "All enterprises fully compliant!";
-    issuesList.appendChild(li);
-  }
-}
 
 function renderTable() {
   const tbody = document.getElementById("table-body");
@@ -2197,12 +2159,6 @@ function initEventListeners() {
       document.getElementById("filter-status-select").value = state.activeFilterStatus;
       applyFiltersAndRender();
     });
-  });
-
-  document.getElementById("btn-review-incomplete").addEventListener("click", () => {
-    state.activeFilterStatus = "incomplete";
-    document.getElementById("filter-status-select").value = "incomplete";
-    applyFiltersAndRender();
   });
 
   document.getElementById("btn-prev-enterprise").addEventListener("click", openPrevEnterprise);
