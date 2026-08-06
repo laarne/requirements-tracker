@@ -456,50 +456,52 @@ function recalculateEnterpriseScores(p) {
   const appType = (p.applicantType || "CHECK").toUpperCase();
   const isGroup = appType === "GROUP";
 
-  const applicableReqKeys = Object.keys(CANONICAL_REQUIREMENTS).filter(k => {
-    return reqs[k] && reqs[k].status !== "NOT_APPLICABLE";
-  });
+  if (!isGroup) {
+    const applicableReqKeys = Object.keys(CANONICAL_REQUIREMENTS).filter(k => {
+      return reqs[k] && reqs[k].status !== "NOT_APPLICABLE";
+    });
 
-  const totalApplicable = applicableReqKeys.length;
-  let completeCount = 0;
-  let checkCount = 0;
-  let missingCount = 0;
+    const totalApplicable = applicableReqKeys.length;
+    let completeCount = 0;
+    let checkCount = 0;
+    let missingCount = 0;
 
-  applicableReqKeys.forEach(k => {
-    const doc = reqs[k];
-    const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
-    if (st === "COMPLETE" || st === "APPROVED") completeCount++;
-    else if (st === "MISSING" || st === "REJECTED") missingCount++;
-    else checkCount++;
-  });
+    applicableReqKeys.forEach(k => {
+      const doc = reqs[k];
+      const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
+      if (st === "COMPLETE" || st === "APPROVED") completeCount++;
+      else if (st === "MISSING" || st === "REJECTED") missingCount++;
+      else checkCount++;
+    });
 
-  p.scores = {
-    complete: completeCount,
-    check: checkCount,
-    review: checkCount,
-    missing: missingCount,
-    total: totalApplicable,
-    percentage: totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0
-  };
+    p.scores = {
+      complete: completeCount,
+      check: checkCount,
+      review: checkCount,
+      missing: missingCount,
+      total: totalApplicable,
+      percentage: totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0
+    };
 
-  p.completionRate = p.scores.percentage;
-  p.completeCount = completeCount;
-  p.checkCount = checkCount;
-  p.reviewCount = checkCount;
-  p.missingCount = missingCount;
-  p.applicableRequirementsCount = totalApplicable;
+    p.completionRate = p.scores.percentage;
+    p.completeCount = completeCount;
+    p.checkCount = checkCount;
+    p.reviewCount = checkCount;
+    p.missingCount = missingCount;
+    p.applicableRequirementsCount = totalApplicable;
 
-  if (completeCount === totalApplicable) {
-    p.status = "COMPLETE";
-    p.priority = "FULLY COMPLIANT";
-  } else if (checkCount > 0) {
-    p.status = "CHECK";
-    p.priority = "MEDIUM";
-  } else {
-    p.status = "INCOMPLETE";
-    p.priority = "HIGH";
+    if (completeCount === totalApplicable) {
+      p.status = "COMPLETE";
+      p.priority = "FULLY COMPLIANT";
+    } else if (checkCount > 0) {
+      p.status = "CHECK";
+      p.priority = "MEDIUM";
+    } else {
+      p.status = "INCOMPLETE";
+      p.priority = "HIGH";
+    }
+    return;
   }
-}
 
   // GROUP Calculation (Dynamic Shared + Member Slots)
   const personalReqKeys = ["validId", "proofOfResidency", "photo2x2"];
@@ -524,21 +526,21 @@ function recalculateEnterpriseScores(p) {
 
   let completedSharedCount = 0;
   let missingSharedCount = 0;
-  let reviewSharedCount = 0;
+  let checkSharedCount = 0;
 
   applicableSharedKeys.forEach(k => {
     const doc = reqs[k];
-    const st = doc ? (doc.status || "REVIEW").toUpperCase() : "REVIEW";
+    const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
     if (st === "COMPLETE" || st === "APPROVED") completedSharedCount++;
     else if (st === "MISSING" || st === "REJECTED") missingSharedCount++;
-    else reviewSharedCount++;
+    else checkSharedCount++;
   });
 
   p.memberDetails = {};
   let totalMemberSlots = 0;
   let completedMemberSlots = 0;
   let missingMemberSlots = 0;
-  let reviewMemberSlots = 0;
+  let checkMemberSlots = 0;
 
   if (membersList.length > 0) {
     membersList.forEach(mName => {
@@ -546,25 +548,26 @@ function recalculateEnterpriseScores(p) {
       personalReqKeys.forEach(reqKey => {
         totalMemberSlots++;
         const doc = reqs[reqKey];
-        let mStatus = "REVIEW";
+        let mStatus = "CHECK";
         let mFile = null;
 
         if (doc && doc.files) {
           const matchingFile = doc.files.find(f => (f.memberName || "").toUpperCase() === mName);
           if (matchingFile) {
             mFile = matchingFile;
-            mStatus = (matchingFile.confidence || 0.9) >= 0.85 ? "COMPLETE" : "REVIEW";
+            mStatus = (matchingFile.confidence || 0.9) >= 0.90 ? "COMPLETE" : "CHECK";
           }
         }
 
         if (state.overrides && state.overrides[p.enterpriseFolderId] && state.overrides[p.enterpriseFolderId][`${reqKey}_${mName}`]) {
           mStatus = state.overrides[p.enterpriseFolderId][`${reqKey}_${mName}`].manualStatus;
+          if (mStatus === "NEEDS_REVIEW" || mStatus === "REVIEW") mStatus = "CHECK";
         }
 
         p.memberDetails[mName][reqKey] = { status: mStatus, file: mFile };
         if (mStatus === "COMPLETE" || mStatus === "APPROVED") completedMemberSlots++;
         else if (mStatus === "MISSING" || mStatus === "REJECTED") missingMemberSlots++;
-        else reviewMemberSlots++;
+        else checkMemberSlots++;
       });
     });
 
@@ -576,7 +579,7 @@ function recalculateEnterpriseScores(p) {
         } else if (mStatuses.some(s => s === "MISSING" || s === "REJECTED")) {
           reqs[reqKey].status = "MISSING";
         } else {
-          reqs[reqKey].status = "REVIEW";
+          reqs[reqKey].status = "CHECK";
         }
       }
     });
@@ -584,21 +587,22 @@ function recalculateEnterpriseScores(p) {
   } else {
     personalReqKeys.forEach(reqKey => {
       totalMemberSlots++;
-      const st = (reqs[reqKey]?.status || "REVIEW").toUpperCase();
+      const st = (reqs[reqKey]?.status || "MISSING").toUpperCase();
       if (st === "COMPLETE" || st === "APPROVED") completedMemberSlots++;
       else if (st === "MISSING" || st === "REJECTED") missingMemberSlots++;
-      else reviewMemberSlots++;
+      else checkMemberSlots++;
     });
   }
 
   const grandTotalSlots = applicableSharedKeys.length + totalMemberSlots;
   const grandCompletedSlots = completedSharedCount + completedMemberSlots;
   const grandMissingSlots = missingSharedCount + missingMemberSlots;
-  const grandReviewSlots = reviewSharedCount + reviewMemberSlots;
+  const grandCheckSlots = checkSharedCount + checkMemberSlots;
 
   p.scores = {
     complete: grandCompletedSlots,
-    review: grandReviewSlots,
+    check: grandCheckSlots,
+    review: grandCheckSlots,
     missing: grandMissingSlots,
     total: grandTotalSlots,
     percentage: grandTotalSlots > 0 ? Math.round((grandCompletedSlots / grandTotalSlots) * 1000) / 10 : 0.0
@@ -606,7 +610,8 @@ function recalculateEnterpriseScores(p) {
 
   p.completionRate = p.scores.percentage;
   p.completeCount = p.scores.complete;
-  p.reviewCount = p.scores.review;
+  p.checkCount = p.scores.check;
+  p.reviewCount = p.scores.check;
   p.missingCount = p.scores.missing;
   p.totalGroupSlots = grandTotalSlots;
   p.applicableRequirementsCount = grandTotalSlots;
@@ -614,12 +619,12 @@ function recalculateEnterpriseScores(p) {
   if (grandCompletedSlots === grandTotalSlots) {
     p.status = "COMPLETE";
     p.priority = "FULLY COMPLIANT";
-  } else if (p.completionRate < 60 || grandMissingSlots >= 3) {
+  } else if (grandCheckSlots > 0) {
+    p.status = "CHECK";
+    p.priority = "MEDIUM";
+  } else {
     p.status = "INCOMPLETE";
     p.priority = "HIGH";
-  } else {
-    p.status = grandReviewSlots > 0 ? "NEEDS_REVIEW" : "INCOMPLETE";
-    p.priority = "MEDIUM";
   }
 }
 
