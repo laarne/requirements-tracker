@@ -624,8 +624,20 @@ async function fetchData() {
   // Load human reviews from Supabase with identity resolution
   const supabaseReviews = await fetchHumanReviewsFromSupabase(identityMap);
   if (supabaseReviews) {
-    state.overrides = { ...state.overrides, ...supabaseReviews };
+    // BUG FIX (Bug A): DEEP merge at the requirement level.
+    // The previous shallow spread `{ ...state.overrides, ...supabaseReviews }` would
+    // REPLACE entire enterprise override objects, silently dropping requirements.
+    // For each enterprise key from Supabase, merge its requirement-level entries
+    // into the existing state.overrides for that enterprise instead of replacing.
+    Object.keys(supabaseReviews).forEach(entKey => {
+      if (!state.overrides[entKey]) {
+        state.overrides[entKey] = {};
+      }
+      // Deep merge: requirement-level entries are merged individually
+      Object.assign(state.overrides[entKey], supabaseReviews[entKey]);
+    });
     saveLocalOverrides();
+    console.log('[HUMAN_REVIEW LOAD DEBUG] state.overrides after Supabase merge:', JSON.stringify(Object.keys(state.overrides)));
   }
 
   // STRICTLY GROUP BY PRIMARY STABLE IDENTITY (enterprise_folder_id) TO PREVENT DUPLICATES
@@ -659,6 +671,11 @@ async function fetchData() {
         requirements: {}
       };
 
+      // BUG FIX (Bug B): Ensure ALL canonical requirements exist in the participant object.
+      // Without this fix: if scan_results has no row for a requirement (e.g. scanner found nothing),
+      // that requirement slot does not exist in requirements{}. Then processDataset() silently
+      // discards any human override for it because `if (copy.requirements[docKey])` is false.
+      // Solution: pre-populate all 12 canonical requirements, defaulting to MISSING if not in scan.
       Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
         const reqScan = entScan[reqKey];
         if (reqScan) {
@@ -666,9 +683,22 @@ async function fetchData() {
           const cleanStatus = rawStatus.split(':')[0].trim().toUpperCase();
           participantsMap[folderKey].requirements[reqKey] = {
             status: cleanStatus,
-            automatedStatus: rawStatus,
+            automatedStatus: cleanStatus,
+            finalStatus: cleanStatus,
+            verificationSource: 'drive',
             files: reqScan.matchedFiles && reqScan.matchedFiles.length > 0 ? reqScan.matchedFiles : (reqScan.fileName ? [{ name: reqScan.fileName, confidence: reqScan.confidence, fileId: reqScan.fileId, webViewLink: reqScan.driveUrl }] : []),
             statusDetail: reqScan.statusDetail || ""
+          };
+        } else {
+          // No scan result for this requirement — default to MISSING from Drive perspective.
+          // Human overrides can still be applied in processDataset().
+          participantsMap[folderKey].requirements[reqKey] = {
+            status: 'MISSING',
+            automatedStatus: 'MISSING',
+            finalStatus: 'MISSING',
+            verificationSource: 'drive',
+            files: [],
+            statusDetail: ''
           };
         }
       });
@@ -750,27 +780,37 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
       }
       Object.keys(activeOverrides).forEach(docKey => {
         if (docKey.startsWith("_")) return;
-        if (copy.requirements[docKey]) {
-          const override = activeOverrides[docKey];
-          // CORE PERSISTENCE RULE:
-          // The EXISTENCE of a human review record gives it authority over the automated scan.
-          // Do NOT rely solely on verificationSource — the presence of the override object is what matters.
-          // finalStatus = humanReview.exists ? humanReview.status : automatedDriveStatus
-          copy.requirements[docKey].review = override;
-          if (override && override.manualStatus && override.manualStatus.trim() !== '') {
-            // Human decision ALWAYS wins over Drive scan result.
-            // A rescan writes to scan_results ONLY — human_reviews is never touched by the scanner.
-            let st = override.manualStatus.trim().toUpperCase();
-            if (st === "NEEDS_REVIEW" || st === "REVIEW") st = "CHECK";
-            copy.requirements[docKey].status = st;
-            copy.requirements[docKey].finalStatus = st;
-            copy.requirements[docKey].verificationSource = 'manual';
-            copy.requirements[docKey].reviewedBy = override.reviewedBy || '';
-            copy.requirements[docKey].reviewedAt = override.reviewedAt || '';
-          }
-          // If override exists but manualStatus is empty/null, keep Drive scan result
-          // but still record that a review object exists for audit purposes
+        // BUG FIX (Bug C): Do not silently drop overrides for requirements that don't exist
+        // in copy.requirements. Create the slot if needed (can happen for group-member
+        // per-person requirements or requirements with no scan_results entry).
+        if (!copy.requirements[docKey]) {
+          copy.requirements[docKey] = {
+            status: 'MISSING',
+            automatedStatus: 'MISSING',
+            finalStatus: 'MISSING',
+            verificationSource: 'drive',
+            files: []
+          };
         }
+        const override = activeOverrides[docKey];
+        // CORE PERSISTENCE RULE:
+        // The EXISTENCE of a human review record gives it authority over the automated scan.
+        // Do NOT rely solely on verificationSource — the presence of the override object is what matters.
+        // finalStatus = humanReview.exists ? humanReview.status : automatedDriveStatus
+        copy.requirements[docKey].review = override;
+        if (override && override.manualStatus && override.manualStatus.trim() !== '') {
+          // Human decision ALWAYS wins over Drive scan result.
+          // A rescan writes to scan_results ONLY — human_reviews is never touched by the scanner.
+          let st = override.manualStatus.trim().toUpperCase();
+          if (st === "NEEDS_REVIEW" || st === "REVIEW") st = "CHECK";
+          copy.requirements[docKey].status = st;
+          copy.requirements[docKey].finalStatus = st;
+          copy.requirements[docKey].verificationSource = 'manual';
+          copy.requirements[docKey].reviewedBy = override.reviewedBy || '';
+          copy.requirements[docKey].reviewedAt = override.reviewedAt || '';
+          console.log(`[HUMAN_REVIEW LOAD DEBUG] enterprise_folder_id: ${entKey} | requirement_id: ${docKey} | manual_status: ${st} | row_found: true | mapped_override: yes | final_status: ${st}`);
+        }
+        // If override exists but manualStatus is empty/null, keep Drive scan result
       });
     } else {
       // No human overrides found for this enterprise.
@@ -1814,8 +1854,30 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "", tar
 
       if (upsertErr) {
         console.error("[PERSISTENCE] human_reviews upsert error:", upsertErr);
+        console.error("[HUMAN_REVIEW DEBUG] SAVE FAILED:", {
+          enterprise_folder_id: primaryFolderId,
+          requirement_id: overrideKey,
+          manual_status: humanStatus,
+          saved_to_supabase: false,
+          error: upsertErr.message || JSON.stringify(upsertErr)
+        });
       } else {
-        console.log(`[PERSISTENCE] human_reviews saved: ${primaryFolderId}/${overrideKey} → ${humanStatus}`);
+        // Fetch back the saved row to confirm it exists with the right ID
+        const { data: savedRow } = await supabaseClient
+          .from('human_reviews')
+          .select('id, enterprise_folder_id, requirement_id, human_status, verification_source, verified_at, updated_at')
+          .eq('enterprise_folder_id', primaryFolderId)
+          .eq('requirement_id', overrideKey)
+          .maybeSingle();
+        console.log("[HUMAN_REVIEW DEBUG]", {
+          enterprise_folder_id: primaryFolderId,
+          requirement_id: overrideKey,
+          manual_status: humanStatus,
+          saved_to_supabase: true,
+          supabase_row_id: savedRow ? savedRow.id : '(row not found on readback!)',
+          verified_at: savedRow ? savedRow.verified_at : null,
+          updated_at: savedRow ? savedRow.updated_at : null
+        });
       }
 
       await supabaseClient
