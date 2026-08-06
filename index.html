@@ -105,98 +105,103 @@
       </div>
     </section>
 
-    <!-- Insights Grid: Top Issues & Program Requirements Breakdown (Side-by-Side) -->
+    <!-- Insights Grid: Independent Vertical Flow for Left and Right Columns -->
     <section class="insights-grid">
       
-      <!-- Top Issues Panel -->
-      <div class="card action-card">
-        <div class="card-header">
-          <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> TOP ISSUES</h2>
+      <!-- Left Column: TOP ISSUES + Filter Chip + Search/Filter Toolbar -->
+      <div class="insights-left-col">
+        <!-- Top Issues Panel -->
+        <div class="card action-card">
+          <div class="card-header">
+            <h2><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> TOP ISSUES</h2>
+          </div>
+          <div class="action-body">
+            <div class="action-stat" id="action-summary-text">19 enterprises require follow-up</div>
+            <div class="action-subhead">Most frequent missing documents:</div>
+            <ul class="action-list" id="action-issues-list">
+              <!-- Rendered dynamically -->
+            </ul>
+            <button class="btn btn-warning w-100" id="btn-review-incomplete">Review Missing Requirements →</button>
+          </div>
         </div>
-        <div class="action-body">
-          <div class="action-stat" id="action-summary-text">19 enterprises require follow-up</div>
-          <div class="action-subhead">Most frequent missing documents:</div>
-          <ul class="action-list" id="action-issues-list">
+
+        <!-- Filter Active Chip Banner -->
+        <div id="filter-active-chip-container" class="filter-chip-bar hidden">
+          <span class="filter-chip-label">FILTERED BY:</span>
+          <span id="filter-active-chip-text" class="filter-active-chip">
+            Requirement: Financial Figures / Expenses
+            <button id="btn-clear-active-chip" title="Clear Filter">&times;</button>
+          </span>
+        </div>
+
+        <!-- Search & Filter Toolbar (Immediately below TOP ISSUES on left) -->
+        <div class="card toolbar-card">
+          <div class="toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="search-input" placeholder="Search enterprise name..." />
+            </div>
+
+            <div class="filters-group">
+              <select id="filter-status-select" class="form-select">
+                <option value="all">Status: All</option>
+                <option value="complete">Complete</option>
+                <option value="needs_review">Needs Review</option>
+                <option value="incomplete">Incomplete</option>
+              </select>
+
+              <select id="filter-type-select" class="form-select">
+                <option value="all">Applicant Type: All</option>
+                <option value="type_individual">Individual</option>
+                <option value="type_group">Group</option>
+              </select>
+
+              <select id="filter-req-select" class="form-select">
+                <option value="all">Requirement: All</option>
+                <option value="missing_applicationLetter">Missing Application Letter</option>
+                <option value="missing_applicationForm">Missing Application Form</option>
+                <option value="missing_businessModelCanvas">Missing Business Model Canvas</option>
+                <option value="missing_bmcFinancials">Missing BMC Financials</option>
+                <option value="missing_financialFigures">Missing Financial Figures</option>
+                <option value="missing_validId">Missing Valid ID</option>
+                <option value="missing_swornStatement">Missing Sworn Statement</option>
+                <option value="missing_proofOfResidency">Missing Proof of Residency</option>
+                <option value="missing_endorsementLetter">Missing Endorsement Letter</option>
+                <option value="missing_photo2x2">Missing 2x2 Photo</option>
+                <option value="missing_signatures">Missing Signatures</option>
+                <option value="missing_declarationOfIntent">Missing Declaration of Intent</option>
+              </select>
+
+              <select id="sort-select" class="form-select">
+                <option value="name_asc">Sort: Name (A-Z)</option>
+
+                <option value="completion_asc">Sort: Lowest Compliance</option>
+                <option value="completion_desc">Sort: Highest Compliance</option>
+                <option value="most_missing">Sort: Most Issues</option>
+              </select>
+
+              <button class="btn btn-secondary btn-icon" id="btn-reset-filters" title="Reset Filters">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Program Requirements Breakdown -->
+      <div class="insights-right-col">
+        <div class="card insights-card">
+          <div class="card-header">
+            <h2>PROGRAM REQUIREMENTS BREAKDOWN</h2>
+            <span class="badge-hint">Click bar to filter table</span>
+          </div>
+          <div class="analytics-bars" id="requirement-analytics-bars">
             <!-- Rendered dynamically -->
-          </ul>
-          <button class="btn btn-warning w-100" id="btn-review-incomplete">Review Missing Requirements →</button>
+          </div>
         </div>
       </div>
 
-      <!-- Analytics Breakdown -->
-      <div class="card insights-card">
-        <div class="card-header">
-          <h2>PROGRAM REQUIREMENTS BREAKDOWN</h2>
-          <span class="badge-hint">Click bar to filter table</span>
-        </div>
-        <div class="analytics-bars" id="requirement-analytics-bars">
-          <!-- Rendered dynamically -->
-        </div>
-      </div>
-
-    </section>
-
-    <!-- Filter Active Chip Banner -->
-    <div id="filter-active-chip-container" class="filter-chip-bar hidden">
-      <span class="filter-chip-label">FILTERED BY:</span>
-      <span id="filter-active-chip-text" class="filter-active-chip">
-        Requirement: Financial Figures / Expenses
-        <button id="btn-clear-active-chip" title="Clear Filter">&times;</button>
-      </span>
-    </div>
-
-    <!-- Search & Filter Toolbar -->
-    <section class="toolbar-card">
-      <div class="toolbar">
-        <div class="search-box">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="search-input" placeholder="Search enterprise name..." />
-        </div>
-
-        <div class="filters-group">
-          <select id="filter-status-select" class="form-select">
-            <option value="all">Status: All</option>
-            <option value="complete">Complete</option>
-            <option value="needs_review">Needs Review</option>
-            <option value="incomplete">Incomplete</option>
-          </select>
-
-          <select id="filter-type-select" class="form-select">
-            <option value="all">Applicant Type: All</option>
-            <option value="type_individual">Individual</option>
-            <option value="type_group">Group</option>
-          </select>
-
-          <select id="filter-req-select" class="form-select">
-            <option value="all">Requirement: All</option>
-            <option value="missing_applicationLetter">Missing Application Letter</option>
-            <option value="missing_applicationForm">Missing Application Form</option>
-            <option value="missing_businessModelCanvas">Missing Business Model Canvas</option>
-            <option value="missing_bmcFinancials">Missing BMC Financials</option>
-            <option value="missing_financialFigures">Missing Financial Figures</option>
-            <option value="missing_validId">Missing Valid ID</option>
-            <option value="missing_swornStatement">Missing Sworn Statement</option>
-            <option value="missing_proofOfResidency">Missing Proof of Residency</option>
-            <option value="missing_endorsementLetter">Missing Endorsement Letter</option>
-            <option value="missing_photo2x2">Missing 2x2 Photo</option>
-            <option value="missing_signatures">Missing Signatures</option>
-            <option value="missing_declarationOfIntent">Missing Declaration of Intent</option>
-          </select>
-
-          <select id="sort-select" class="form-select">
-            <option value="name_asc">Sort: Name (A-Z)</option>
-
-            <option value="completion_asc">Sort: Lowest Compliance</option>
-            <option value="completion_desc">Sort: Highest Compliance</option>
-            <option value="most_missing">Sort: Most Issues</option>
-          </select>
-
-          <button class="btn btn-secondary btn-icon" id="btn-reset-filters" title="Reset Filters">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            Reset
-          </button>
-        </div>
-      </div>
     </section>
 
     <!-- Compact Enterprise Review Table (No horizontal scrolling!) -->
