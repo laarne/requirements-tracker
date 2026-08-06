@@ -458,9 +458,31 @@ function closeExcludedListModal() {
   if (modal) modal.classList.add("hidden");
 }
 
+function findParticipant(key) {
+  if (!key) return null;
+  const targetKey = typeof key === "string" ? key.trim() : String(key);
+  const normKey = normalizeIdentityKey(targetKey);
+
+  return state.participants.find(x => {
+    if (!x) return false;
+    if (x.enterpriseFolderId === targetKey || x.driveFolderId === targetKey || x.id === targetKey) return true;
+    
+    const fNorm = normalizeIdentityKey(x.enterpriseFolderId || x.driveFolderId || x.id);
+    if (fNorm && fNorm === normKey) return true;
+
+    const nameNorm = normalizeIdentityKey(x.name);
+    if (nameNorm && nameNorm === normKey) return true;
+
+    return false;
+  });
+}
+
 function openChangeAppTypeModal(participantId) {
-  const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.driveFolderId === participantId || x.id === participantId));
-  if (!p) return;
+  const p = findParticipant(participantId);
+  if (!p) {
+    console.warn("[TYPE] Could not find participant:", participantId);
+    return;
+  }
 
   const primaryFolderId = p.enterpriseFolderId || p.driveFolderId || p.id;
   state.editingTypeParticipantId = primaryFolderId;
@@ -473,8 +495,8 @@ function openChangeAppTypeModal(participantId) {
   const elBadge = document.getElementById("app-type-modal-current-badge");
   if (elBadge) {
     elBadge.textContent = currentType === "CHECK" ? "Unspecified (Needs Checking)" : currentType;
-    elBadge.style.background = currentType === "GROUP" ? "#1e3a8a" : (currentType === "INDIVIDUAL" ? "#1f2937" : "#b45309");
-    elBadge.style.color = currentType === "GROUP" ? "#93c5fd" : (currentType === "INDIVIDUAL" ? "#d1d5db" : "#fef3c7");
+    elBadge.style.background = currentType === "GROUP" ? "#1e3a8a" : (currentType === "INDIVIDUAL" ? "#1f2937" : "#1e1b4b");
+    elBadge.style.color = currentType === "GROUP" ? "#93c5fd" : (currentType === "INDIVIDUAL" ? "#cbd5e1" : "#a5b4fc");
   }
 
   const radios = document.querySelectorAll('input[name="modal-app-type-choice"]');
@@ -1261,7 +1283,7 @@ function renderDocStatusBadge(status) {
 }
 
 async function setApplicantTypeOverride(participantId, newApplicantType) {
-  const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.driveFolderId === participantId || x.id === participantId));
+  const p = findParticipant(participantId);
   if (!p) return;
 
   const primaryFolderId = p.enterpriseFolderId || p.driveFolderId || p.id;
@@ -1277,7 +1299,7 @@ async function setApplicantTypeOverride(participantId, newApplicantType) {
         .from('human_reviews')
         .upsert({
           enterprise_folder_id: primaryFolderId,
-          enterprise_id: p.id,
+          enterprise_id: p.id || primaryFolderId,
           requirement_id: '_applicantType',
           human_status: newApplicantType,
           reviewer_name: localStorage.getItem("yfc_reviewer_name") || "Operational Reviewer",
@@ -1296,7 +1318,7 @@ async function setApplicantTypeOverride(participantId, newApplicantType) {
 }
 
 function openDrawer(participantId) {
-  const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.driveFolderId === participantId || x.id === participantId));
+  const p = findParticipant(participantId);
   if (!p) return;
 
   const primaryFolderId = p.enterpriseFolderId || p.driveFolderId || p.id;
@@ -1306,14 +1328,17 @@ function openDrawer(participantId) {
   const rawType = getApplicantTypeString(p.applicantType);
   let typeDisplay = "";
   if (rawType === "GROUP") {
-    typeDisplay = `GROUP <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryFolderId}">Edit</button>`;
+    typeDisplay = `<span class="app-type-badge-group">GROUP</span> <button class="btn-more-options btn-header-edit-type" data-id="${primaryFolderId}" title="Change applicant type" aria-label="Change applicant type">⋯</button>`;
   } else if (rawType === "INDIVIDUAL") {
-    typeDisplay = `INDIVIDUAL <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryFolderId}">Edit</button>`;
+    typeDisplay = `<span class="app-type-badge-indiv">INDIVIDUAL</span> <button class="btn-more-options btn-header-edit-type" data-id="${primaryFolderId}" title="Change applicant type" aria-label="Change applicant type">⋯</button>`;
   } else {
-    typeDisplay = `<span style="color:#fbbf24; font-weight:700;">⚠ Applicant type needs checking</span> <button class="btn btn-warning btn-xs btn-open-edit-type" data-id="${primaryFolderId}">Choose Type</button>`;
+    typeDisplay = `<span class="app-type-unset">Applicant type not set</span> <button class="btn-more-options btn-header-edit-type" data-id="${primaryFolderId}" title="Set applicant type" aria-label="Set applicant type">⋯</button>`;
   }
   document.getElementById("drawer-applicant-type").innerHTML = typeDisplay;
-  document.getElementById("drawer-applicant-type").querySelector(".btn-open-edit-type")?.addEventListener("click", () => openChangeAppTypeModal(primaryFolderId));
+  document.getElementById("drawer-applicant-type").querySelector(".btn-header-edit-type")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openChangeAppTypeModal(primaryFolderId);
+  });
 
   document.getElementById("drawer-comp-rate-badge").textContent = `${p.completeCount} of ${p.applicableRequirementsCount} requirements complete`;
 
@@ -1347,12 +1372,16 @@ function openDrawer(participantId) {
   // Applicant Type Selector Widget if CHECK
   if (rawType === "CHECK") {
     const typeWidget = document.createElement("div");
-    typeWidget.style.cssText = "margin-bottom:16px; background:#111827; padding:12px; border-radius:6px; border:1px solid #f59e0b;";
+    typeWidget.style.cssText = "margin-bottom:16px; background:#1e1b4b; padding:12px 14px; border-radius:6px; border:1px solid #4338ca;";
     typeWidget.innerHTML = `
-      <div style="color:#fbbf24; font-weight:700; font-size:0.85rem; margin-bottom:8px;">⚠ Applicant type needs checking before final compliance evaluation:</div>
-      <button class="btn btn-warning btn-sm btn-open-edit-type" data-id="${primaryFolderId}">Choose Applicant Type →</button>
+      <div style="color:#a5b4fc; font-weight:700; font-size:0.85rem; margin-bottom:8px;">⚠ Applicant type needs checking before final compliance evaluation:</div>
+      <button class="btn btn-primary btn-sm btn-drawer-choose-type" data-id="${primaryFolderId}">Choose Applicant Type →</button>
     `;
-    typeWidget.querySelector(".btn-open-edit-type")?.addEventListener("click", () => openChangeAppTypeModal(primaryFolderId));
+    typeWidget.querySelector(".btn-drawer-choose-type").addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      openChangeAppTypeModal(primaryFolderId);
+    });
     reviewRequiredList.appendChild(typeWidget);
   }
 

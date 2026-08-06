@@ -19,7 +19,7 @@ def test_read_only_badge_and_edit_button_in_app():
     app_js = BASE_DIR / "app.js"
     assert app_js.exists()
     content = app_js.read_text(encoding="utf-8")
-    assert 'btn-open-edit-type' in content
+    assert 'btn-drawer-choose-type' in content or 'btn-header-edit-type' in content
     assert 'openChangeAppTypeModal' in content
     assert 'setApplicantTypeOverride' in content
 
