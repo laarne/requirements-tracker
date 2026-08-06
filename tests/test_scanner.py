@@ -685,6 +685,17 @@ class TestClassificationAccuracyRegression(unittest.TestCase):
         self.assertIn("swornStatement", req_ids)
         self.assertNotIn("validId", req_ids)
 
+    def test_multiple_member_candidates_retained(self):
+        file_dicts = [
+            {"name": "VALID ID (MADES)", "size": 200000, "mimeType": "image/jpeg"},
+            {"name": "VALID ID (PEPITO)", "size": 200000, "mimeType": "image/jpeg"},
+            {"name": "VALID ID (PULI)", "size": 200000, "mimeType": "image/jpeg"},
+        ]
+        reqs, _ = self.scanner.process_enterprise_files(file_dicts, "ent-1", "Bittersweet Bites")
+        valid_id_files = reqs["validId"]["files"]
+        self.assertEqual(len(valid_id_files), 3)
+        self.assertEqual(reqs["validId"]["status"], "NEEDS_REVIEW")
+
 
 if __name__ == "__main__":
     unittest.main()

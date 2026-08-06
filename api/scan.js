@@ -511,26 +511,50 @@ async function listChildFolders(drive, rootFolderId) {
 }
 
 async function listFilesInFolder(drive, folderId) {
-  let files = [];
-  let pageToken = null;
+  let allFiles = [];
+  let foldersToProcess = [folderId];
 
-  do {
-    const res = await drive.files.list({
-      q: `'${folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
-      fields: 'nextPageToken, files(id, name, mimeType, size, webViewLink, createdTime)',
-      pageSize: 100,
-      pageToken: pageToken,
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true
-    });
+  while (foldersToProcess.length > 0) {
+    const currentFid = foldersToProcess.shift();
 
-    if (res.data && res.data.files) {
-      files.push(...res.data.files);
-    }
-    pageToken = res.data.nextPageToken;
-  } while (pageToken);
+    // 1. Fetch files in current folder level
+    let pageToken = null;
+    do {
+      const res = await drive.files.list({
+        q: `'${currentFid}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
+        fields: 'nextPageToken, files(id, name, mimeType, size, webViewLink, createdTime)',
+        pageSize: 100,
+        pageToken: pageToken,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
+      });
 
-  return files;
+      if (res.data && res.data.files) {
+        allFiles.push(...res.data.files);
+      }
+      pageToken = res.data.nextPageToken;
+    } while (pageToken);
+
+    // 2. Fetch nested subfolders inside current folder level
+    pageToken = null;
+    do {
+      const res = await drive.files.list({
+        q: `'${currentFid}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`,
+        fields: 'nextPageToken, files(id, name)',
+        pageSize: 100,
+        pageToken: pageToken,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true
+      });
+
+      if (res.data && res.data.files) {
+        res.data.files.forEach(sub => foldersToProcess.push(sub.id));
+      }
+      pageToken = res.data.nextPageToken;
+    } while (pageToken);
+  }
+
+  return allFiles;
 }
 
 function deriveEnterpriseId(folderName) {
