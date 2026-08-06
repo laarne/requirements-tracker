@@ -71,11 +71,13 @@ const MASTER_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || "12KBAKnxhkK
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Scan-Request-ID');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
+
+  const reqId = req.headers['x-scan-request-id'] || (req.body && req.body.requestId) || ('req_' + Date.now());
 
   const supabaseUrl = process.env.SUPABASE_URL || "https://gndnmbdzfoamtgjkvnyr.supabase.co";
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_zojIDwrTmNXHQLWuOhm7yQ_2pIvgypM";
@@ -87,31 +89,64 @@ module.exports = async (req, res) => {
   let currentStage = 'INIT';
 
   try {
-    console.log(`[SCAN] [${jobId}] Started - Stage: ${currentStage}`);
+    console.log(`[SCAN] [${jobId}] Started (reqId: ${reqId}) - Stage: ${currentStage}`);
 
-    // 1. Rate-limiting check: Prevent duplicate concurrent scans
+    // 1. Idempotency Check: Recent scan with exact request_id
+    if (reqId) {
+      const { data: recentJob } = await supabase
+        .from('scan_jobs')
+        .select('*')
+        .eq('request_id', reqId)
+        .gt('created_at', new Date(Date.now() - 60 * 1000).toISOString())
+        .maybeSingle();
+
+      if (recentJob) {
+        console.log(`[SCAN] [${jobId}] Idempotent request matched recent job: ${recentJob.id}`);
+        return res.status(200).json({
+          success: recentJob.status === 'COMPLETED',
+          jobId: recentJob.id,
+          status: recentJob.status,
+          idempotent: true
+        });
+      }
+    }
+
+    // 2. Rate-limiting & Stale Job Recovery: Prevent concurrent scans
+    const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const { data: runningJobs } = await supabase
       .from('scan_jobs')
       .select('*')
-      .eq('status', 'RUNNING')
-      .gt('started_at', new Date(Date.now() - 3 * 60 * 1000).toISOString());
+      .eq('status', 'RUNNING');
 
     if (runningJobs && runningJobs.length > 0) {
-      console.log(`[SCAN] [${jobId}] Concurrent scan prevented - active job: ${runningJobs[0].id}`);
-      return res.status(200).json({
-        success: false,
-        error: "A Google Drive scan is already in progress.",
-        jobId: runningJobs[0].id,
-        status: "RUNNING"
-      });
+      const activeJob = runningJobs[0];
+      if (activeJob.started_at < fifteenMinsAgo) {
+        // Recover stale job
+        console.warn(`[SCAN] Recovering stale abandoned job: ${activeJob.id}`);
+        await supabase
+          .from('scan_jobs')
+          .update({ status: 'FAILED', error_message: 'Stale scan job abandoned after 15 minutes timeout.' })
+          .eq('id', activeJob.id);
+      } else {
+        console.log(`[SCAN] [${jobId}] Concurrent scan prevented - active job: ${activeJob.id}`);
+        return res.status(409).json({
+          success: false,
+          errorCode: "SCAN_ALREADY_RUNNING",
+          error: "A Google Drive scan is already in progress.",
+          jobId: activeJob.id,
+          status: "RUNNING"
+        });
+      }
     }
 
-    // 2. Create scan job record
+    // 3. Create scan job record with request_id
     currentStage = 'JOB_CREATION';
     const { data: jobData, error: jobErr } = await supabase
       .from('scan_jobs')
       .insert({
         status: 'RUNNING',
+        request_id: reqId,
+        stage: currentStage,
         started_at: new Date().toISOString()
       })
       .select()
@@ -123,7 +158,7 @@ module.exports = async (req, res) => {
       jobId = jobData.id;
     }
 
-    // 3. Connect to Google Drive API
+    // 4. Connect to Google Drive API
     currentStage = 'AUTHENTICATION';
     console.log(`[SCAN] [${jobId}] Google Drive authentication - Connecting to Google Drive API...`);
     let driveService = null;
@@ -149,24 +184,18 @@ module.exports = async (req, res) => {
     let staleRecordsArchived = 0;
     let humanReviewsPreservedCount = 0;
 
-    // Load data.json identity map for resolving legacy/synthetic folder IDs
     const dataJsonMap = loadDataJsonFolderIdMap();
-
     let scannedParticipants = [];
 
     if (!driveService) {
-      const errorMsg = "Google Drive API credentials are not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON in Vercel environment variables.";
-      console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errorMsg}`);
+      const errInfo = classifyGoogleError(new Error(authError || "Google Drive API credentials missing"));
+      console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, ErrorCode: ${errInfo.code}, Error: ${errInfo.message}`);
 
       if (job && job.id) {
         try {
           await supabase
             .from('scan_jobs')
-            .update({
-              status: 'FAILED',
-              completed_at: new Date().toISOString(),
-              error_message: errorMsg
-            })
+            .update({ status: 'FAILED', completed_at: new Date().toISOString(), error_code: errInfo.code, error_message: errInfo.message })
             .eq('id', job.id);
         } catch (e) {}
       }
@@ -176,32 +205,38 @@ module.exports = async (req, res) => {
         jobId: jobId,
         status: "FAILED",
         stage: currentStage,
-        error: "Google Drive authentication failed: Credentials missing or invalid.",
+        errorCode: errInfo.code,
+        error: errInfo.message,
         foldersFound: 0,
         filesFound: 0,
         resultsSaved: 0
       });
     }
 
-    // REAL GOOGLE DRIVE API ENUMERATION & CLOUD SCAN
+    // 5. REAL GOOGLE DRIVE API ENUMERATION (WITH TRANSIENT RETRY)
     currentStage = 'ROOT_DISCOVERY';
-    console.log(`[SCAN] [${jobId}] Root folder discovery - Root folder ID: ${MASTER_FOLDER_ID}`);
-    const gdriveFolders = await listChildFolders(driveService, MASTER_FOLDER_ID);
+    console.log(`[SCAN] [${jobId}] Root folder discovery - Master Folder: ${MASTER_FOLDER_ID}`);
+    
+    let gdriveFolders = [];
+    try {
+      gdriveFolders = await fetchWithRetry(() => listChildFolders(driveService, MASTER_FOLDER_ID));
+    } catch (gErr) {
+      const errInfo = classifyGoogleError(gErr);
+      console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, ErrorCode: ${errInfo.code}`);
+      throw gErr;
+    }
+
     foldersFound = gdriveFolders.length;
 
     if (foldersFound === 0) {
-      const errorMsg = `Google Drive scan found 0 enterprise folders under master folder ${MASTER_FOLDER_ID}.`;
-      console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errorMsg}`);
+      const errInfo = classifyGoogleError(new Error(`Google Drive root folder query returned 0 folders for master ID ${MASTER_FOLDER_ID}`));
+      console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errInfo.message}`);
 
       if (job && job.id) {
         try {
           await supabase
             .from('scan_jobs')
-            .update({
-              status: 'FAILED',
-              completed_at: new Date().toISOString(),
-              error_message: errorMsg
-            })
+            .update({ status: 'FAILED', completed_at: new Date().toISOString(), error_code: errInfo.code, error_message: errInfo.message })
             .eq('id', job.id);
         } catch (e) {}
       }
@@ -211,7 +246,8 @@ module.exports = async (req, res) => {
         jobId: jobId,
         status: "FAILED",
         stage: currentStage,
-        error: "Google Drive root folder query returned zero enterprise folders.",
+        errorCode: errInfo.code,
+        error: errInfo.message,
         foldersFound: 0,
         filesFound: 0,
         resultsSaved: 0
@@ -221,7 +257,6 @@ module.exports = async (req, res) => {
     currentStage = 'FOLDER_ENUMERATION';
     console.log(`[SCAN] [${jobId}] Enterprise folder discovery - Found ${foldersFound} folders`);
 
-    // Ensure stable enterprise identity by folder ID
     const folderMap = new Map();
     gdriveFolders.forEach(f => {
       if (!folderMap.has(f.id)) {
@@ -230,7 +265,6 @@ module.exports = async (req, res) => {
     });
     uniqueFolderIdsCount = folderMap.size;
 
-    // Check near-duplicate folder names across DIFFERENT folder IDs for diagnostic flagging
     const normNameSet = new Map();
     folderMap.forEach((folder, folderId) => {
       const norm = normalizeNameForComparison(folder.name);
@@ -241,7 +275,6 @@ module.exports = async (req, res) => {
       }
     });
 
-    // Get existing scan_results to check for new enterprises
     const { data: existingScanData } = await supabase.from('scan_results').select('enterprise_folder_id, enterprise_id');
     const existingFolderIds = new Set((existingScanData || []).map(r => r.enterprise_folder_id || r.enterprise_id));
 
@@ -260,7 +293,7 @@ module.exports = async (req, res) => {
 
         let files = [];
         try {
-          files = await listFilesInFolder(driveService, folderId);
+          files = await fetchWithRetry(() => listFilesInFolder(driveService, folderId));
         } catch (fErr) {
           console.warn(`[SCAN WARNING] File enumeration failed for folder ${folder.name} (${folderId}):`, fErr.message);
         }
@@ -321,14 +354,35 @@ module.exports = async (req, res) => {
 
     const integrity = validateScanIntegrity(scannedParticipants, scanResultsToUpsert);
     if (!integrity.valid) {
-      throw new Error(`Dataset integrity check failed: ${integrity.reason}`);
+      throw new Error(`Integrity check failed: ${integrity.reason}`);
     }
 
-    // DATABASE COMMIT STEP (100% ATOMIC MUTATION ONLY AFTER VALIDATION SUCCESS)
+    // DATABASE COMMIT STEP (ATOMIC MUTATION ONLY AFTER VALIDATION SUCCESS)
     currentStage = 'DATABASE_COMMIT';
     console.log(`[SCAN] [${jobId}] Committing ${scanResultsToUpsert.length} staged scan_results to Supabase...`);
 
-    if (scanResultsToUpsert.length > 0) {
+    // Try PostgreSQL RPC function first for true server-side transaction
+    let rpcCommitted = false;
+    try {
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('commit_scan_snapshot', {
+        p_job_id: jobId,
+        p_scan_results: scanResultsToUpsert,
+        p_folders_found: foldersFound,
+        p_files_processed: filesProcessed,
+        p_results_saved: scanResultsToUpsert.length
+      });
+
+      if (!rpcErr && rpcRes && rpcRes.success) {
+        rpcCommitted = true;
+        resultsSaved = scanResultsToUpsert.length;
+        console.log(`[SCAN] [${jobId}] PostgreSQL RPC commit_scan_snapshot executed successfully.`);
+      }
+    } catch (e) {
+      console.warn("[SCAN] PostgreSQL RPC not available or failed, falling back to single-statement array upsert:", e.message);
+    }
+
+    // Fallback: Single-statement PostgreSQL array upsert (inherently 100% atomic in PostgreSQL)
+    if (!rpcCommitted && scanResultsToUpsert.length > 0) {
       const { error: upsertErr } = await supabase
         .from('scan_results')
         .upsert(scanResultsToUpsert, { onConflict: 'enterprise_folder_id,requirement_id' });
@@ -380,8 +434,8 @@ module.exports = async (req, res) => {
     });
 
   } catch (err) {
-    const errorMsg = err.message || "Cloud scan error occurred.";
-    console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errorMsg}`, err.stack || '');
+    const errInfo = classifyGoogleError(err);
+    console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, ErrorCode: ${errInfo.code}, Error: ${errInfo.message}`);
 
     if (supabase && job && job.id) {
       try {
@@ -390,7 +444,8 @@ module.exports = async (req, res) => {
           .update({
             status: 'FAILED',
             completed_at: new Date().toISOString(),
-            error_message: `Stage: ${currentStage} - ${errorMsg}`
+            error_code: errInfo.code,
+            error_message: `Stage: ${currentStage} - ${errInfo.message}`
           })
           .eq('id', job.id);
       } catch (e) {}
@@ -401,10 +456,57 @@ module.exports = async (req, res) => {
       jobId: jobId,
       status: "FAILED",
       stage: currentStage,
-      error: `Google Drive scan failed during ${currentStage.toLowerCase().replace(/_/g, ' ')}. ${errorMsg}`
+      errorCode: errInfo.code,
+      error: `Google Drive scan failed during ${currentStage.toLowerCase().replace(/_/g, ' ')}. ${errInfo.message}`
     });
   }
 };
+
+function classifyGoogleError(err) {
+  const msg = (err && err.message) ? err.message : "";
+  if (msg.includes("credentials") || msg.includes("GOOGLE_SERVICE_ACCOUNT")) {
+    return { code: "AUTHENTICATION_FAILURE", transient: false, message: "Google Drive API authentication credentials missing or invalid." };
+  }
+  if (msg.includes("403") || msg.includes("permission") || msg.includes("access")) {
+    return { code: "AUTHORIZATION_FAILURE", transient: false, message: "Access denied to configured Google Drive master folder." };
+  }
+  if (msg.includes("404") || msg.includes("not found")) {
+    return { code: "DRIVE_NOT_FOUND", transient: false, message: "Configured Google Drive master folder not found." };
+  }
+  if (msg.includes("429") || msg.includes("rate") || msg.includes("quota")) {
+    return { code: "GOOGLE_API_RATE_LIMIT", transient: true, message: "Google Drive API rate limit exceeded." };
+  }
+  if (msg.includes("ETIMEDOUT") || msg.includes("timeout") || msg.includes("ECONNRESET")) {
+    return { code: "GOOGLE_API_TIMEOUT", transient: true, message: "Google Drive API connection timed out." };
+  }
+  if (msg.includes("500") || msg.includes("502") || msg.includes("503")) {
+    return { code: "GOOGLE_API_500", transient: true, message: "Google Drive API temporarily returned a server error." };
+  }
+  if (msg.includes("Integrity check failed") || msg.includes("integrity")) {
+    return { code: "DATA_VALIDATION_ERROR", transient: false, message: msg };
+  }
+  if (msg.includes("commit") || msg.includes("database")) {
+    return { code: "DATABASE_COMMIT_ERROR", transient: false, message: "Supabase database commit transaction failed." };
+  }
+  return { code: "UNKNOWN_ERROR", transient: false, message: msg || "Cloud scan error occurred." };
+}
+
+async function fetchWithRetry(fn, maxRetries = 3) {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      return await fn();
+    } catch (err) {
+      attempt++;
+      const errInfo = classifyGoogleError(err);
+      if (!errInfo.transient || attempt >= maxRetries) {
+        throw err;
+      }
+      console.warn(`[SCAN RETRY] Transient error (${errInfo.code}), retrying attempt ${attempt}/${maxRetries} in ${attempt * 1000}ms...`);
+      await new Promise(r => setTimeout(r, attempt * 1000));
+    }
+  }
+}
 
 function validateScanIntegrity(participants, scanResults) {
   if (!participants || participants.length === 0) {

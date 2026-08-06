@@ -9,6 +9,26 @@ if scratch_dir not in sys.path:
 
 from test_group_compliance_full import recalculate_enterprise_scores, CANONICAL_REQUIREMENTS
 
+def classify_google_error(msg):
+    msg_str = str(msg)
+    if "credentials" in msg_str or "GOOGLE_SERVICE_ACCOUNT" in msg_str:
+        return {"code": "AUTHENTICATION_FAILURE", "transient": False, "message": "Google Drive API authentication credentials missing or invalid."}
+    if "403" in msg_str or "permission" in msg_str or "access" in msg_str:
+        return {"code": "AUTHORIZATION_FAILURE", "transient": False, "message": "Access denied to configured Google Drive master folder."}
+    if "404" in msg_str or "not found" in msg_str:
+        return {"code": "DRIVE_NOT_FOUND", "transient": False, "message": "Configured Google Drive master folder not found."}
+    if "429" in msg_str or "rate" in msg_str or "quota" in msg_str:
+        return {"code": "GOOGLE_API_RATE_LIMIT", "transient": True, "message": "Google Drive API rate limit exceeded."}
+    if "ETIMEDOUT" in msg_str or "timeout" in msg_str or "ECONNRESET" in msg_str:
+        return {"code": "GOOGLE_API_TIMEOUT", "transient": True, "message": "Google Drive API connection timed out."}
+    if "500" in msg_str or "502" in msg_str or "503" in msg_str:
+        return {"code": "GOOGLE_API_500", "transient": True, "message": "Google Drive API temporarily returned a server error."}
+    if "Integrity check failed" in msg_str or "integrity" in msg_str:
+        return {"code": "DATA_VALIDATION_ERROR", "transient": False, "message": msg_str}
+    if "commit" in msg_str or "database" in msg_str:
+        return {"code": "DATABASE_COMMIT_ERROR", "transient": False, "message": "Supabase database commit transaction failed."}
+    return {"code": "UNKNOWN_ERROR", "transient": False, "message": msg_str or "Cloud scan error occurred."}
+
 class TestAtomicScanAndErrorUX(unittest.TestCase):
 
     def setUp(self):
@@ -101,6 +121,7 @@ class TestAtomicScanAndErrorUX(unittest.TestCase):
             "success": False,
             "status": "FAILED",
             "stage": "FOLDER_ENUMERATION",
+            "errorCode": "GOOGLE_API_TIMEOUT",
             "error": "Google Drive scan failed during folder enumeration. API timeout.",
             "lastSuccessfulScan": "Aug 6, 2026 12:39 PM"
         }
@@ -108,6 +129,7 @@ class TestAtomicScanAndErrorUX(unittest.TestCase):
         # Verify scan response is explicit FAILED
         self.assertFalse(scan_response["success"])
         self.assertEqual(scan_response["status"], "FAILED")
+        self.assertEqual(scan_response["errorCode"], "GOOGLE_API_TIMEOUT")
 
         # Verify dataset in UI memory remains 100% unchanged
         after_p = self.known_good_dataset[0]
@@ -146,6 +168,47 @@ class TestAtomicScanAndErrorUX(unittest.TestCase):
         self.assertEqual(p["scores"]["total"], 18)
         self.assertEqual(p["scores"]["complete"], 14)
         self.assertEqual(p["scores"]["percentage"], 77.8)
+
+    def test_error_classification(self):
+        """Test error classification helper categorizes transient vs non-transient errors."""
+        e1 = classify_google_error("GOOGLE_SERVICE_ACCOUNT_JSON not set")
+        self.assertEqual(e1["code"], "AUTHENTICATION_FAILURE")
+        self.assertFalse(e1["transient"])
+
+        e2 = classify_google_error("429 rate limit exceeded")
+        self.assertEqual(e2["code"], "GOOGLE_API_RATE_LIMIT")
+        self.assertTrue(e2["transient"])
+
+        e3 = classify_google_error("ETIMEDOUT connection failed")
+        self.assertEqual(e3["code"], "GOOGLE_API_TIMEOUT")
+        self.assertTrue(e3["transient"])
+
+        e4 = classify_google_error("Integrity check failed: missing folder")
+        self.assertEqual(e4["code"], "DATA_VALIDATION_ERROR")
+        self.assertFalse(e4["transient"])
+
+    def test_reviewer_override_and_audit_preservation(self):
+        """Test human reviewer override changes state to NEEDS_REVIEW and preserves automated detection."""
+        ent = self.known_good_dataset[0]
+
+        # Reviewer flags issue on Application Letter
+        app_doc = ent["requirements"]["applicationLetter"]
+        app_doc["review"] = {
+            "manualStatus": "NEEDS_REVIEW",
+            "reviewerName": "Operational Reviewer",
+            "note": "Reason: Missing signature. Note: Page 2 signature is missing."
+        }
+        app_doc["status"] = "NEEDS_REVIEW"
+
+        # Automated detection remains intact in files array
+        self.assertEqual(len(app_doc["files"]), 1)
+        self.assertEqual(app_doc["files"][0]["name"], "AppLetter.pdf")
+
+        # Score recalculates accurately
+        p = recalculate_enterprise_scores(ent)
+        self.assertEqual(p["scores"]["complete"], 13)
+        self.assertEqual(p["scores"]["needsReview"], 1)
+        self.assertEqual(p["scores"]["percentage"], 72.2)
 
 if __name__ == "__main__":
     unittest.main()

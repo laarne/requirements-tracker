@@ -1659,6 +1659,16 @@ function startScanStatusPolling(jobId) {
   if (state.scanPollInterval) clearInterval(state.scanPollInterval);
 
   const scanLabel = document.getElementById("scan-status-label");
+  const stageMap = {
+    'JOB_CREATION': '1/5 Initializing scan job…',
+    'AUTHENTICATION': '1/5 Authenticating Google Drive API…',
+    'ROOT_DISCOVERY': '2/5 Querying root folder…',
+    'FOLDER_ENUMERATION': '2/5 Discovering enterprise folders…',
+    'FILE_ENUMERATION_AND_CLASSIFICATION': '3/5 Reading & classifying documents…',
+    'STAGING_RESULTS': '4/5 Staging results in memory…',
+    'INTEGRITY_VALIDATION': '4/5 Validating dataset integrity…',
+    'DATABASE_COMMIT': '5/5 Committing snapshot transaction to database…'
+  };
 
   state.scanPollInterval = setInterval(async () => {
     try {
@@ -1666,7 +1676,8 @@ function startScanStatusPolling(jobId) {
       const data = await res.json();
 
       if (scanLabel) {
-        scanLabel.textContent = `Scanning Google Drive (${data.uniqueEnterpriseFolders || data.foldersFound || 16} unique enterprise folders)...`;
+        const stageText = stageMap[data.stage] || `Scanning Google Drive (${data.foldersFound || 19} folders)…`;
+        scanLabel.textContent = `↻ ${stageText}`;
       }
 
       if (data.status === 'COMPLETED') {
