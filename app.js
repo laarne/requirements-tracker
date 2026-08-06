@@ -397,6 +397,18 @@ function formatEnterpriseNameFromId(id) {
   return id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
+function getApplicantTypeString(val) {
+  if (!val) return "CHECK";
+  if (typeof val === "string") return val.toUpperCase();
+  if (typeof val === "object") {
+    if (typeof val.manualStatus === "string") return val.manualStatus.toUpperCase();
+    if (typeof val.human_status === "string") return val.human_status.toUpperCase();
+    if (typeof val.humanStatus === "string") return val.humanStatus.toUpperCase();
+    if (typeof val.type === "string") return val.type.toUpperCase();
+  }
+  return String(val).toUpperCase();
+}
+
 function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
   state.rawDataset = raw;
 
@@ -415,7 +427,8 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
     const activeOverrides = state.overrides[entKey] || state.overrides[copy.id];
     if (activeOverrides) {
       if (activeOverrides._applicantType) {
-        copy.applicantType = activeOverrides._applicantType;
+        const rawAppType = activeOverrides._applicantType;
+        copy.applicantType = typeof rawAppType === 'object' ? (rawAppType.manualStatus || rawAppType.human_status || rawAppType.type || "CHECK") : rawAppType;
       }
       Object.keys(activeOverrides).forEach(docKey => {
         if (docKey.startsWith("_")) return;
@@ -453,7 +466,7 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
 
 function recalculateEnterpriseScores(p) {
   const reqs = p.requirements || {};
-  const appType = (p.applicantType || "CHECK").toUpperCase();
+  const appType = getApplicantTypeString(p.applicantType);
   const isGroup = appType === "GROUP";
 
   if (!isGroup) {
@@ -689,9 +702,9 @@ function applyFiltersAndRender() {
   if (state.activeFilterType !== "all") {
     const tp = state.activeFilterType;
     if (tp === "type_individual") {
-      list = list.filter(p => (p.applicantType || '').toUpperCase() === "INDIVIDUAL");
+      list = list.filter(p => getApplicantTypeString(p.applicantType) === "INDIVIDUAL");
     } else if (tp === "type_group") {
-      list = list.filter(p => (p.applicantType || '').toUpperCase() === "GROUP");
+      list = list.filter(p => getApplicantTypeString(p.applicantType) === "GROUP");
     }
   }
 
@@ -958,7 +971,7 @@ function renderTable() {
     tr.dataset.id = primaryKey;
 
     let appTypeHtml = "";
-    const rawType = (p.applicantType || "CHECK").toUpperCase();
+    const rawType = getApplicantTypeString(p.applicantType);
     if (rawType === "GROUP") {
       appTypeHtml = `<span class="badge" style="background:#1e3a8a; color:#93c5fd; font-weight:700;">GROUP</span>`;
     } else if (rawType === "INDIVIDUAL") {
@@ -1081,7 +1094,7 @@ function openDrawer(participantId) {
   state.selectedParticipantId = primaryFolderId;
 
   document.getElementById("drawer-participant-name").textContent = p.name;
-  const rawType = (p.applicantType || "CHECK").toUpperCase();
+  const rawType = getApplicantTypeString(p.applicantType);
   const typeDisplay = rawType === "CHECK" ? `<span style="color:#fbbf24; font-weight:700;">⚠ Applicant type needs checking</span>` : rawType;
   document.getElementById("drawer-applicant-type").innerHTML = typeDisplay;
   document.getElementById("drawer-comp-rate-badge").textContent = `${p.completeCount} of ${p.applicableRequirementsCount} requirements complete`;
