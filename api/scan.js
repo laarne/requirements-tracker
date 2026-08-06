@@ -647,6 +647,40 @@ function determineApplicantType(folderName, files) {
   return "INDIVIDUAL";
 }
 
+function extractMemberAttribution(f) {
+  if (f.folderPath) {
+    const parts = f.folderPath.split('/').filter(Boolean);
+    if (parts.length > 1) {
+      const sub = parts[parts.length - 1].trim();
+      const lower = sub.toLowerCase();
+      if (sub && !["documents", "files", "requirements", "uncategorized", "root"].includes(lower)) {
+        return { memberName: sub.toUpperCase(), memberSource: "folder" };
+      }
+    }
+  }
+
+  const fn = f.name || "";
+  const matchParen = fn.match(/[\(\[]([A-Za-z0-9\s_\-]+)[\)\]]/);
+  if (matchParen) {
+    const candidate = matchParen[1].trim();
+    const upper = candidate.toUpperCase();
+    if (candidate && !["NEW", "PDF", "DOCX", "XLSX", "JPG", "PNG", "COPY", "UPDATED", "FINAL", "1PAGE"].includes(upper)) {
+      return { memberName: upper, memberSource: "filename" };
+    }
+  }
+
+  const matchSep = fn.match(/[\-_\s]+([A-Z]{3,15})$/i);
+  if (matchSep) {
+    const candidate = matchSep[1].trim();
+    const upper = candidate.toUpperCase();
+    if (candidate && !["NEW", "PDF", "DOCX", "XLSX", "JPG", "PNG", "COPY", "UPDATED", "FINAL"].includes(upper)) {
+      return { memberName: upper, memberSource: "filename" };
+    }
+  }
+
+  return { memberName: null, memberSource: "unknown" };
+}
+
 function processFilesForRequirements(files, applicantType) {
   const reqs = {};
 
@@ -721,13 +755,16 @@ function processFilesForRequirements(files, applicantType) {
         const confidence = matchSource === "ALIAS_EXACT" ? 0.95 :
                           matchSource === "FILENAME_KEYWORD" ? 0.92 :
                           matchSource === "MIME_TYPE_HINT" ? 0.7 : 0.85;
+        const attr = extractMemberAttribution(f);
         matchedFiles.push({
           fileId: f.id,
           name: f.name,
           confidence: confidence,
           webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
           detectionMethod: matchSource,
-          size: parseInt(f.size || '0', 10)
+          size: parseInt(f.size || '0', 10),
+          memberName: attr.memberName,
+          memberSource: attr.memberSource
         });
         fileAssignments.set(f.id, reqKey);
       }
@@ -740,7 +777,7 @@ function processFilesForRequirements(files, applicantType) {
         status = "NEEDS_REVIEW";
       } else if (reqKey === "validId") {
         status = topMatch.confidence >= 0.85 ? "COMPLETE" : "NEEDS_REVIEW";
-      } else if (matchedFiles.length > 1) {
+      } else if (applicantType !== "GROUP" && matchedFiles.length > 1) {
         status = "NEEDS_REVIEW";
       } else {
         status = "COMPLETE";

@@ -420,40 +420,134 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
 
 function recalculateEnterpriseScores(p) {
   const reqs = p.requirements || {};
-  const applicableReqKeys = Object.keys(CANONICAL_REQUIREMENTS).filter(k => {
-    return reqs[k] && reqs[k].status !== "NOT_APPLICABLE";
+  const isGroup = (p.applicantType || "INDIVIDUAL").toUpperCase() === "GROUP";
+
+  if (!isGroup) {
+    // INDIVIDUAL Calculation (100% Backward Compatible 11-slot model)
+    const applicableReqKeys = Object.keys(CANONICAL_REQUIREMENTS).filter(k => {
+      return reqs[k] && reqs[k].status !== "NOT_APPLICABLE";
+    });
+
+    const totalApplicable = applicableReqKeys.length;
+    let completeCount = 0;
+    let missingCount = 0;
+    let needsReviewCount = 0;
+
+    applicableReqKeys.forEach(k => {
+      const st = (reqs[k].status || "MISSING").toUpperCase();
+      if (st === "COMPLETE" || st === "APPROVED") completeCount++;
+      if (st === "MISSING") missingCount++;
+      if (st === "NEEDS_REVIEW") needsReviewCount++;
+    });
+
+    p.completionRate = totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0;
+    p.completeCount = completeCount;
+    p.missingCount = missingCount;
+    p.needsReviewCount = needsReviewCount;
+    p.applicableRequirementsCount = totalApplicable;
+
+    if (completeCount === totalApplicable) {
+      p.status = "COMPLETE";
+      p.priority = "FULLY COMPLIANT";
+    } else if (p.completionRate < 60 || missingCount >= 3) {
+      p.status = missingCount > 0 ? "INCOMPLETE" : "NEEDS_REVIEW";
+      p.priority = "HIGH";
+    } else if (needsReviewCount > 0 || missingCount > 0) {
+      p.status = needsReviewCount > 0 ? "NEEDS_REVIEW" : "INCOMPLETE";
+      p.priority = "MEDIUM";
+    } else {
+      p.status = "COMPLETE";
+      p.priority = "LOW";
+    }
+    return;
+  }
+
+  // GROUP Calculation (Dynamic Shared + Member Slots)
+  const personalReqKeys = ["validId", "proofOfResidency", "photo2x2"];
+  const memberNamesSet = new Set();
+
+  personalReqKeys.forEach(reqKey => {
+    const doc = reqs[reqKey];
+    if (doc && doc.files && doc.files.length > 0) {
+      doc.files.forEach(f => {
+        if (f.memberName) {
+          memberNamesSet.add(f.memberName.trim().toUpperCase());
+        }
+      });
+    }
   });
 
-  const totalApplicable = applicableReqKeys.length;
-  let completeCount = 0;
-  let missingCount = 0;
-  let needsReviewCount = 0;
+  const membersList = Array.from(memberNamesSet).sort();
+  p.groupMembers = membersList; // e.g. ["MADES", "PEPITO", "PULI"]
 
-  applicableReqKeys.forEach(k => {
+  const sharedReqKeys = Object.keys(CANONICAL_REQUIREMENTS).filter(k => !personalReqKeys.includes(k));
+  const applicableSharedKeys = sharedReqKeys.filter(k => reqs[k] && reqs[k].status !== "NOT_APPLICABLE");
+
+  let completedSharedCount = 0;
+  applicableSharedKeys.forEach(k => {
     const st = (reqs[k].status || "MISSING").toUpperCase();
-    if (st === "COMPLETE" || st === "APPROVED") completeCount++;
-    if (st === "MISSING") missingCount++;
-    if (st === "NEEDS_REVIEW") needsReviewCount++;
+    if (st === "COMPLETE" || st === "APPROVED") completedSharedCount++;
   });
 
-  p.completionRate = totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0;
-  p.completeCount = completeCount;
-  p.missingCount = missingCount;
-  p.needsReviewCount = needsReviewCount;
-  p.applicableRequirementsCount = totalApplicable;
+  p.memberDetails = {};
+  let totalMemberSlots = 0;
+  let completedMemberSlots = 0;
 
-  if (completeCount === totalApplicable) {
+  if (membersList.length > 0) {
+    membersList.forEach(mName => {
+      p.memberDetails[mName] = {};
+      personalReqKeys.forEach(reqKey => {
+        totalMemberSlots++;
+        const doc = reqs[reqKey];
+        let mStatus = "MISSING";
+        let mFile = null;
+
+        if (doc && doc.files) {
+          const matchingFile = doc.files.find(f => (f.memberName || "").toUpperCase() === mName);
+          if (matchingFile) {
+            mFile = matchingFile;
+            mStatus = (matchingFile.confidence || 0.9) >= 0.85 ? "COMPLETE" : "NEEDS_REVIEW";
+          }
+        }
+
+        // Apply human review override if specifically set for member/requirement
+        if (state.overrides && state.overrides[p.enterpriseFolderId] && state.overrides[p.enterpriseFolderId][`${reqKey}_${mName}`]) {
+          mStatus = state.overrides[p.enterpriseFolderId][`${reqKey}_${mName}`].manualStatus;
+        }
+
+        p.memberDetails[mName][reqKey] = { status: mStatus, file: mFile };
+        if (mStatus === "COMPLETE" || mStatus === "APPROVED") {
+          completedMemberSlots++;
+        }
+      });
+    });
+  } else {
+    // Fallback if no specific member names are parsed yet
+    personalReqKeys.forEach(reqKey => {
+      totalMemberSlots++;
+      const st = (reqs[reqKey]?.status || "MISSING").toUpperCase();
+      if (st === "COMPLETE" || st === "APPROVED") completedMemberSlots++;
+    });
+  }
+
+  const totalSharedSlots = applicableSharedKeys.length;
+  const grandTotalSlots = totalSharedSlots + totalMemberSlots;
+  const grandCompletedSlots = completedSharedCount + completedMemberSlots;
+
+  p.completionRate = grandTotalSlots > 0 ? Math.round((grandCompletedSlots / grandTotalSlots) * 1000) / 10 : 0.0;
+  p.completeCount = grandCompletedSlots;
+  p.totalGroupSlots = grandTotalSlots;
+  p.applicableRequirementsCount = grandTotalSlots;
+
+  if (grandCompletedSlots === grandTotalSlots) {
     p.status = "COMPLETE";
     p.priority = "FULLY COMPLIANT";
-  } else if (p.completionRate < 60 || missingCount >= 3) {
-    p.status = missingCount > 0 ? "INCOMPLETE" : "NEEDS_REVIEW";
+  } else if (p.completionRate < 60) {
+    p.status = "INCOMPLETE";
     p.priority = "HIGH";
-  } else if (needsReviewCount > 0 || missingCount > 0) {
-    p.status = needsReviewCount > 0 ? "NEEDS_REVIEW" : "INCOMPLETE";
-    p.priority = "MEDIUM";
   } else {
-    p.status = "COMPLETE";
-    p.priority = "LOW";
+    p.status = "NEEDS_REVIEW";
+    p.priority = "MEDIUM";
   }
 }
 
@@ -789,6 +883,29 @@ function openDrawer(participantId) {
     const autoStatusBadge = renderDocStatusBadge(docData.automatedStatus || docData.status);
     const humanReviewBadge = docData.review ? `<span class="badge" style="background:#4f46e5; color:#ffffff;">HUMAN: ${escapeHtml(docData.review.manualStatus)}</span>` : '';
 
+    let memberListHtml = '';
+    if (p.applicantType === "GROUP" && ["validId", "proofOfResidency", "photo2x2"].includes(docKey) && p.groupMembers && p.groupMembers.length > 0) {
+      const mems = p.groupMembers;
+      const compCount = mems.filter(m => p.memberDetails[m] && p.memberDetails[m][docKey] && (p.memberDetails[m][docKey].status === 'COMPLETE' || p.memberDetails[m][docKey].status === 'APPROVED')).length;
+      
+      memberListHtml = `
+        <div style="margin-top:6px; background:#111827; padding:6px 10px; border-radius:4px; border:1px solid #374151;">
+          <div style="font-size:0.72rem; font-weight:700; color:#38bdf8; margin-bottom:4px;">
+            MEMBER CHECKLIST (${compCount} / ${mems.length} MEMBERS COMPLETE):
+          </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.72rem;">
+            ${mems.map(m => {
+              const mInfo = p.memberDetails[m] ? p.memberDetails[m][docKey] : null;
+              const isComp = mInfo && (mInfo.status === 'COMPLETE' || mInfo.status === 'APPROVED');
+              return `<span style="color:${isComp ? '#4ade80' : '#f87171'}; font-weight:600;">
+                ${isComp ? '✓' : '✕'} ${escapeHtml(m)} ${isComp ? '' : '— Missing'}
+              </span>`;
+            }).join("")}
+          </div>
+        </div>
+      `;
+    }
+
     card.innerHTML = `
       <div class="doc-item-header">
         <span class="doc-item-title">${docName} ${files.length > 1 ? `<span style="font-size:0.75rem; color:#f59e0b;">(${files.length} files matched)</span>` : ''}</span>
@@ -801,6 +918,7 @@ function openDrawer(participantId) {
       <div class="doc-item-filename">
         ${files.length > 0 ? `Matched file: <strong>${escapeHtml(files[0].name)}</strong>` : (isNotApplicable ? 'Not applicable for Individual applicant' : 'No candidate document detected.')}
       </div>
+      ${memberListHtml}
       ${docData.review ? `<span class="meta-sub" style="font-size:0.7rem; color:#a5b4fc;">Entered by: <strong>${escapeHtml(docData.review.reviewedBy || 'Operational Reviewer')}</strong> (${new Date(docData.review.reviewedAt).toLocaleTimeString()}) ${docData.review.note ? `— <em>"${escapeHtml(docData.review.note)}"</em>` : ''}</span>` : ''}
       ${!isNotApplicable ? `
       <div class="doc-item-actions">
