@@ -531,121 +531,177 @@ function validateScanIntegrity(participants, scanResults) {
   return { valid: true };
 }
 
-function sanitizePrivateKey(key) {
-  if (!key || typeof key !== 'string') return null;
-  let cleanKey = key.trim();
-
-  // Strip wrapping outer quotes if present (e.g. '"-----BEGIN..."' or "'-----BEGIN...'")
-  if ((cleanKey.startsWith('"') && cleanKey.endsWith('"')) || (cleanKey.startsWith("'") && cleanKey.endsWith("'"))) {
-    cleanKey = cleanKey.slice(1, -1).trim();
-  }
-
-  // Convert literal \\n or \n escape sequences to actual newline characters
-  cleanKey = cleanKey.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
-
-  return cleanKey;
+function analyzeKeyStatus(rawKey) {
+  if (rawKey === undefined) return "MISSING";
+  if (rawKey === null || (typeof rawKey === 'string' && rawKey.trim().length === 0)) return "EMPTY";
+  if (typeof rawKey !== 'string') return "INVALID_TYPE";
+  const clean = sanitizePrivateKey(rawKey);
+  const val = validatePrivateKeyFormat(clean);
+  return val.valid ? "PRESENT_VALID_FORMAT" : "PRESENT_INVALID_FORMAT";
 }
 
-function validatePrivateKeyFormat(privateKey) {
-  if (!privateKey) {
-    return { valid: false, reason: "Private key string is null or empty." };
-  }
-
-  const hasBegin = privateKey.includes("-----BEGIN PRIVATE KEY-----") || privateKey.includes("-----BEGIN RSA PRIVATE KEY-----");
-  const hasEnd = privateKey.includes("-----END PRIVATE KEY-----") || privateKey.includes("-----END RSA PRIVATE KEY-----");
-
-  if (!hasBegin || !hasEnd) {
-    return { valid: false, reason: `Private key missing PEM headers (BEGIN: ${hasBegin}, END: ${hasEnd}).` };
-  }
-
-  try {
-    const crypto = require('crypto');
-    const keyObj = crypto.createPrivateKey(privateKey);
-    return { valid: true, type: keyObj.type, asymmetricKeyType: keyObj.asymmetricKeyType, reason: "PrivateKey parsed successfully by Node.js crypto engine." };
-  } catch (err) {
-    return { valid: false, reason: `Node.js crypto.createPrivateKey failed: ${err.message}` };
-  }
+function analyzeEmailStatus(email) {
+  if (email === undefined) return "MISSING";
+  if (email === null || (typeof email === 'string' && email.trim().length === 0)) return "EMPTY";
+  return "PRESENT";
 }
 
-function getGoogleDriveService() {
-  const serviceAccountEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  const clientEmailEnv = process.env.GOOGLE_CLIENT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKeyEnv = process.env.GOOGLE_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
-  const apiKey = process.env.GOOGLE_DRIVE_API_KEY || process.env.GOOGLE_API_KEY;
+function findPrivateKeyInObject(obj) {
+  if (!obj || typeof obj !== 'object') return { rawKey: undefined, path: null };
 
-  let selectedCreds = null;
-  let authSource = "NONE";
-  let jsonParsed = false;
-  let jsonHasPrivateKey = false;
+  for (const prop of ["private_key", "privateKey", "key", "secret_key"]) {
+    if (prop in obj) {
+      return { rawKey: obj[prop], path: prop };
+    }
+  }
 
-  // Strategy A: GOOGLE_SERVICE_ACCOUNT_JSON
+  for (const parent of ["credentials", "gdrive", "service_account", "google"]) {
+    if (obj[parent] && typeof obj[parent] === 'object') {
+      const nested = findPrivateKeyInObject(obj[parent]);
+      if (nested.path) {
+        return { rawKey: nested.rawKey, path: `${parent}.${nested.path}` };
+      }
+    }
+  }
+
+  return { rawKey: undefined, path: null };
+}
+
+function findClientEmailInObject(obj) {
+  if (!obj || typeof obj !== 'object') return { rawEmail: undefined, path: null };
+
+  for (const prop of ["client_email", "clientEmail", "email", "userEmail"]) {
+    if (prop in obj) {
+      return { rawEmail: obj[prop], path: prop };
+    }
+  }
+
+  for (const parent of ["credentials", "gdrive", "service_account", "google"]) {
+    if (obj[parent] && typeof obj[parent] === 'object') {
+      const nested = findClientEmailInObject(obj[parent]);
+      if (nested.path) {
+        return { rawEmail: nested.rawEmail, path: `${parent}.${nested.path}` };
+      }
+    }
+  }
+
+  return { rawEmail: undefined, path: null };
+}
+
+function analyzeCredentials(env) {
+  const serviceAccountEnv = env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const clientEmailEnv = env.GOOGLE_CLIENT_EMAIL || env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKeyEnv = env.GOOGLE_PRIVATE_KEY || env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  const apiKey = env.GOOGLE_DRIVE_API_KEY || env.GOOGLE_API_KEY;
+
+  let jsonAnalysis = {
+    envPresent: Boolean(serviceAccountEnv),
+    parsed: false,
+    topLevelKeys: [],
+    privateKeyStatus: "MISSING",
+    clientEmailStatus: "MISSING",
+    privateKeyLength: 0,
+    hasBegin: false,
+    hasEnd: false,
+    cryptoReason: "JSON not provided"
+  };
+
+  let parsedJson = null;
   if (serviceAccountEnv) {
-    let parsedJson = null;
     try {
       parsedJson = JSON.parse(serviceAccountEnv);
-      jsonParsed = true;
+      jsonAnalysis.parsed = true;
     } catch (e) {
       try {
         const decoded = Buffer.from(serviceAccountEnv, 'base64').toString('utf8');
         parsedJson = JSON.parse(decoded);
-        jsonParsed = true;
-      } catch (b64Err) {
-        console.warn("[SCAN AUTH DIAGNOSTIC] Failed parsing GOOGLE_SERVICE_ACCOUNT_JSON (raw & base64):", e.message);
-      }
+        jsonAnalysis.parsed = true;
+      } catch (b64Err) {}
     }
 
     if (parsedJson && typeof parsedJson === 'object') {
-      const rawKey = parsedJson.private_key || parsedJson.privateKey || parsedJson.key;
-      jsonHasPrivateKey = Boolean(rawKey);
-      const cleanKey = sanitizePrivateKey(rawKey);
-      const val = validatePrivateKeyFormat(cleanKey);
+      jsonAnalysis.topLevelKeys = Object.keys(parsedJson);
+      const { rawKey } = findPrivateKeyInObject(parsedJson);
+      const { rawEmail } = findClientEmailInObject(parsedJson);
 
-      if (val.valid) {
-        authSource = "GOOGLE_SERVICE_ACCOUNT_JSON";
-        selectedCreds = {
-          client_email: (parsedJson.client_email || parsedJson.clientEmail || "").trim(),
-          private_key: cleanKey
-        };
+      jsonAnalysis.privateKeyStatus = analyzeKeyStatus(rawKey);
+      jsonAnalysis.clientEmailStatus = analyzeEmailStatus(rawEmail);
+
+      const cleanKey = sanitizePrivateKey(rawKey);
+      if (cleanKey) {
+        jsonAnalysis.privateKeyLength = cleanKey.length;
+        jsonAnalysis.hasBegin = cleanKey.includes("-----BEGIN PRIVATE KEY-----") || cleanKey.includes("-----BEGIN RSA PRIVATE KEY-----");
+        jsonAnalysis.hasEnd = cleanKey.includes("-----END PRIVATE KEY-----") || cleanKey.includes("-----END RSA PRIVATE KEY-----");
+        const val = validatePrivateKeyFormat(cleanKey);
+        jsonAnalysis.cryptoReason = val.reason;
       }
     }
   }
 
-  // Strategy B: Separate env vars (GOOGLE_CLIENT_EMAIL + GOOGLE_PRIVATE_KEY)
-  if (!selectedCreds && clientEmailEnv && privateKeyEnv) {
-    const cleanKey = sanitizePrivateKey(privateKeyEnv);
-    const val = validatePrivateKeyFormat(cleanKey);
+  const cleanSepKey = sanitizePrivateKey(privateKeyEnv);
+  const sepKeyVal = validatePrivateKeyFormat(cleanSepKey);
 
-    if (val.valid) {
-      authSource = "GOOGLE_CLIENT_EMAIL_AND_PRIVATE_KEY";
-      selectedCreds = {
-        client_email: clientEmailEnv.trim(),
-        private_key: cleanKey
-      };
-    }
+  let sepAnalysis = {
+    clientEmailStatus: analyzeEmailStatus(clientEmailEnv),
+    privateKeyStatus: analyzeKeyStatus(privateKeyEnv),
+    privateKeyLength: cleanSepKey ? cleanSepKey.length : 0,
+    hasBegin: cleanSepKey ? (cleanSepKey.includes("-----BEGIN PRIVATE KEY-----") || cleanSepKey.includes("-----BEGIN RSA PRIVATE KEY-----")) : false,
+    hasEnd: cleanSepKey ? (cleanSepKey.includes("-----END PRIVATE KEY-----") || cleanSepKey.includes("-----END RSA PRIVATE KEY-----")) : false,
+    cryptoReason: sepKeyVal.reason
+  };
+
+  let selectedCreds = null;
+  let authSource = "NONE";
+
+  if (jsonAnalysis.privateKeyStatus === "PRESENT_VALID_FORMAT") {
+    authSource = "GOOGLE_SERVICE_ACCOUNT_JSON";
+    const { rawKey } = findPrivateKeyInObject(parsedJson);
+    const { rawEmail } = findClientEmailInObject(parsedJson);
+    selectedCreds = {
+      client_email: (rawEmail || "").trim(),
+      private_key: sanitizePrivateKey(rawKey)
+    };
+  } else if (sepAnalysis.privateKeyStatus === "PRESENT_VALID_FORMAT") {
+    authSource = "GOOGLE_CLIENT_EMAIL_AND_PRIVATE_KEY";
+    selectedCreds = {
+      client_email: (clientEmailEnv || "").trim(),
+      private_key: cleanSepKey
+    };
   }
 
-  // Diagnostic metrics
-  const rawKeyForDiag = selectedCreds ? selectedCreds.private_key : (privateKeyEnv || "");
-  const cleanKeyForDiag = sanitizePrivateKey(rawKeyForDiag);
-  const keyVal = validatePrivateKeyFormat(cleanKeyForDiag);
-  const hasBegin = cleanKeyForDiag ? (cleanKeyForDiag.includes("-----BEGIN PRIVATE KEY-----") || cleanKeyForDiag.includes("-----BEGIN RSA PRIVATE KEY-----")) : false;
-  const hasEnd = cleanKeyForDiag ? (cleanKeyForDiag.includes("-----END PRIVATE KEY-----") || cleanKeyForDiag.includes("-----END RSA PRIVATE KEY-----")) : false;
+  return { selectedCreds, apiKey: !selectedCreds ? apiKey : null, jsonAnalysis, sepAnalysis, authSource };
+}
 
-  console.log(`[SCAN AUTH DIAGNOSTIC] Source: ${authSource} | JSON Present: ${Boolean(serviceAccountEnv)} (Parsed: ${jsonParsed}, HasKey: ${jsonHasPrivateKey}) | Separate Email: ${Boolean(clientEmailEnv)} | Separate Key: ${Boolean(privateKeyEnv)} | Key Length: ${cleanKeyForDiag ? cleanKeyForDiag.length : 0} | BEGIN: ${hasBegin} | END: ${hasEnd} | Crypto Parse: ${keyVal.valid ? 'OK (' + keyVal.asymmetricKeyType + ')' : 'FAILED (' + keyVal.reason + ')'}`);
+function getGoogleDriveService() {
+  const diag = analyzeCredentials(process.env);
 
-  if (selectedCreds) {
+  console.log(`[SCAN AUTH DIAGNOSTIC]
+    - Selected Source: ${diag.authSource}
+    - GOOGLE_SERVICE_ACCOUNT_JSON present: ${diag.jsonAnalysis.envPresent} (Parsed: ${diag.jsonAnalysis.parsed})
+    - JSON top-level keys: [${diag.jsonAnalysis.topLevelKeys.join(", ")}]
+    - JSON private_key status: ${diag.jsonAnalysis.privateKeyStatus} (Length: ${diag.jsonAnalysis.privateKeyLength})
+    - JSON client_email status: ${diag.jsonAnalysis.clientEmailStatus}
+    - Separate client_email status: ${diag.sepAnalysis.clientEmailStatus}
+    - Separate private_key status: ${diag.sepAnalysis.privateKeyStatus} (Length: ${diag.sepAnalysis.privateKeyLength})
+    - Selected PEM BEGIN: ${diag.selectedCreds ? true : (diag.jsonAnalysis.hasBegin || diag.sepAnalysis.hasBegin)}
+    - Selected PEM END: ${diag.selectedCreds ? true : (diag.jsonAnalysis.hasEnd || diag.sepAnalysis.hasEnd)}
+    - Crypto parse result: ${diag.selectedCreds ? 'OK' : (diag.jsonAnalysis.cryptoReason || diag.sepAnalysis.cryptoReason)}
+  `);
+
+  if (diag.selectedCreds) {
     const auth = new google.auth.GoogleAuth({
-      credentials: selectedCreds,
+      credentials: diag.selectedCreds,
       scopes: ['https://www.googleapis.com/auth/drive.readonly']
     });
     return google.drive({ version: 'v3', auth });
-  } else if (apiKey) {
+  } else if (diag.apiKey) {
     console.log("[SCAN AUTH DIAGNOSTIC] Source: GOOGLE_DRIVE_API_KEY (API Key Mode)");
-    return google.drive({ version: 'v3', auth: apiKey });
+    return google.drive({ version: 'v3', auth: diag.apiKey });
   }
 
-  const diagSummary = `Source selected: ${authSource} (JSON present: ${Boolean(serviceAccountEnv)}, JSON parsed: ${jsonParsed}, JSON has key: ${jsonHasPrivateKey}, Separate email: ${Boolean(clientEmailEnv)}, Separate key: ${Boolean(privateKeyEnv)}, Key length: ${cleanKeyForDiag ? cleanKeyForDiag.length : 0}, BEGIN: ${hasBegin}, END: ${hasEnd}, Crypto parse: ${keyVal.reason})`;
-  throw new Error(`Service account private key formatting error (${keyVal.reason}). ${diagSummary}. Verify GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_PRIVATE_KEY environment variables in Vercel.`);
+  const diagSummary = `Selected Source: ${diag.authSource} | JSON Top-Level Keys: [${diag.jsonAnalysis.topLevelKeys.join(", ")}] | JSON private_key status: ${diag.jsonAnalysis.privateKeyStatus} | JSON client_email status: ${diag.jsonAnalysis.clientEmailStatus} | Separate email status: ${diag.sepAnalysis.clientEmailStatus} | Separate key status: ${diag.sepAnalysis.privateKeyStatus}`;
+
+  throw new Error(`Google Drive authentication failed: Service account private key is missing or invalid (${diagSummary}). Please configure a valid GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_CLIENT_EMAIL + GOOGLE_PRIVATE_KEY in Vercel production environment variables.`);
 }
 
 async function listChildFolders(drive, rootFolderId) {
