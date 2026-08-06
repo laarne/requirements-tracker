@@ -350,6 +350,77 @@
     </div>
   </aside>
 
+  <!-- Flag Document Issue Modal -->
+  <div class="modal-overlay hidden" id="modal-flag-issue-overlay">
+    <div class="modal flag-issue-modal" style="max-width:480px; width:90%;">
+      <div class="modal-header" style="background:#1e1b4b; border-bottom:1px solid #4338ca;">
+        <div>
+          <h3 style="color:#a5b4fc; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#f59e0b;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            Flag Document Issue
+          </h3>
+          <p class="subtitle" style="color:#cbd5e1; margin-top:2px;">Reopen completed requirement for human review</p>
+        </div>
+        <button class="btn-close" id="btn-close-flag-modal" aria-label="Close Modal">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding:20px;">
+        <div style="background:#1f2937; padding:12px; border-radius:6px; border:1px solid #374151; margin-bottom:16px;">
+          <div style="font-size:0.75rem; color:#9ca3af; font-weight:700; text-transform:uppercase;">TARGET REQUIREMENT</div>
+          <div style="font-size:0.95rem; font-weight:700; color:#f8fafc; margin-top:2px;" id="flag-modal-req-name">Application Letter</div>
+          <div style="font-size:0.75rem; color:#34d399; font-weight:600; margin-top:4px;">Current status: ✓ COMPLETE</div>
+          <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;" id="flag-modal-filename">Matched file: Application_Letter.pdf</div>
+        </div>
+
+        <!-- Group Member Choice (Visible only for GROUP personal requirements) -->
+        <div id="flag-modal-member-group" class="hidden" style="margin-bottom:14px; background:#111827; padding:10px 12px; border-radius:6px; border:1px solid #38bdf8;">
+          <label style="font-size:0.78rem; font-weight:700; color:#38bdf8; display:block; margin-bottom:6px;">
+            AFFECTED GROUP MEMBER:
+          </label>
+          <div id="flag-modal-member-radios" style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.8rem; color:#f1f5f9;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="font-size:0.78rem; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">
+            REASON FOR FLAGGING ISSUE <span style="color:#ef4444;">*</span>
+          </label>
+          <select id="flag-modal-reason-select" class="form-select" style="width:100%; font-size:0.85rem; padding:8px 10px;">
+            <option value="Wrong document">Wrong document</option>
+            <option value="Expired document">Expired document</option>
+            <option value="Incorrect information">Incorrect information</option>
+            <option value="Unreadable / poor quality">Unreadable / poor quality</option>
+            <option value="Missing signature">Missing signature</option>
+            <option value="Missing required information">Missing required information</option>
+            <option value="Invalid document">Invalid document</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="font-size:0.78rem; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">
+            REVIEWER IDENTITY
+          </label>
+          <input type="text" id="flag-modal-reviewer-name" class="form-select" style="width:100%; text-align:left; font-size:0.85rem; padding:8px 10px;" placeholder="Your name (e.g. Operational Reviewer)" />
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.78rem; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">
+            REVIEWER NOTE <span style="color:#ef4444;">*</span>
+          </label>
+          <textarea id="flag-modal-reviewer-note" class="form-textarea" style="width:100%; height:75px; font-size:0.825rem; padding:8px;" placeholder="Explain the specific issue found (e.g. Applicant signature is missing on page 2)..."></textarea>
+          <div style="font-size:0.7rem; color:#94a3b8; margin-top:2px;">Reviewer note is required before reopening requirement.</div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button class="btn btn-secondary" id="btn-cancel-flag">Cancel</button>
+          <button class="btn btn-warning" id="btn-submit-flag" disabled>Flag & Reopen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Document Evidence Modal -->
   <div class="modal-overlay hidden" id="doc-modal-overlay">
     <div class="modal doc-inspector-modal">

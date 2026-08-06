@@ -1090,8 +1090,15 @@ function openDrawer(participantId) {
             ${mems.map(m => {
               const mInfo = p.memberDetails[m] ? p.memberDetails[m][docKey] : null;
               const isComp = mInfo && (mInfo.status === 'COMPLETE' || mInfo.status === 'APPROVED');
-              return `<span style="color:${isComp ? '#4ade80' : '#f87171'}; font-weight:600;">
-                ${isComp ? '✓' : '✕'} ${escapeHtml(m)} ${isComp ? '' : '— Missing'}
+              const isReview = mInfo && mInfo.status === 'NEEDS_REVIEW';
+              let labelText = '— Missing';
+              let color = '#f87171';
+              let icon = '✕';
+              if (isComp) { labelText = ''; color = '#4ade80'; icon = '✓'; }
+              else if (isReview) { labelText = '— Needs Review'; color = '#fbbf24'; icon = '⚠'; }
+              
+              return `<span style="color:${color}; font-weight:600;">
+                ${icon} ${escapeHtml(m)} ${labelText}
               </span>`;
             }).join("")}
           </div>
@@ -1118,9 +1125,20 @@ function openDrawer(participantId) {
         actionButtonsHtml = `
           <div class="doc-item-actions">
             <button class="btn btn-secondary btn-sm btn-inspect-doc" data-doc="${docKey}">Inspect Evidence</button>
+            <button class="btn btn-warning btn-sm btn-flag-doc" data-doc="${docKey}">Flag Issue</button>
           </div>`;
       }
     }
+
+    const flaggedBannerHtml = (docData.review && docData.review.manualStatus === "NEEDS_REVIEW") ? `
+      <div style="margin-top:8px; background:#1e1b4b; padding:8px 10px; border-radius:4px; border-left:3px solid #f59e0b; font-size:0.75rem;">
+        <div style="font-weight:700; color:#fbbf24; display:flex; align-items:center; gap:4px;">
+          <span>⚠ REVIEWER FLAGGED ISSUE</span>
+        </div>
+        <div style="color:#f1f5f9; margin-top:2px; font-weight:600;">Issue Note: <em>"${escapeHtml(docData.review.note || 'Document issue flagged')}"</em></div>
+        <div style="color:#94a3b8; font-size:0.68rem; margin-top:2px;">Entered by <strong>${escapeHtml(docData.review.reviewedBy || 'Operational Reviewer')}</strong> on ${new Date(docData.review.reviewedAt).toLocaleString()}</div>
+      </div>
+    ` : '';
 
     card.innerHTML = `
       <div class="doc-item-header">
@@ -1135,7 +1153,8 @@ function openDrawer(participantId) {
         ${files.length > 0 ? `Matched file: <strong>${escapeHtml(files[0].name)}</strong>` : (isNotApplicable ? 'Not applicable for Individual applicant' : 'No candidate document detected.')}
       </div>
       ${memberListHtml}
-      ${docData.review ? `<span class="meta-sub" style="font-size:0.7rem; color:#a5b4fc;">Entered by: <strong>${escapeHtml(docData.review.reviewedBy || 'Operational Reviewer')}</strong> (${new Date(docData.review.reviewedAt).toLocaleTimeString()}) ${docData.review.note ? `— <em>"${escapeHtml(docData.review.note)}"</em>` : ''}</span>` : ''}
+      ${flaggedBannerHtml}
+      ${docData.review && docData.review.manualStatus !== "NEEDS_REVIEW" ? `<span class="meta-sub" style="font-size:0.7rem; color:#a5b4fc;">Entered by: <strong>${escapeHtml(docData.review.reviewedBy || 'Operational Reviewer')}</strong> (${new Date(docData.review.reviewedAt).toLocaleTimeString()}) ${docData.review.note ? `— <em>"${escapeHtml(docData.review.note)}"</em>` : ''}</span>` : ''}
       ${actionButtonsHtml}
     `;
 
@@ -1152,6 +1171,12 @@ function openDrawer(participantId) {
     if (btnReject) btnReject.addEventListener("click", (e) => {
       e.stopPropagation();
       setDocOverride(primaryFolderId, docKey, "MISSING");
+    });
+
+    const btnFlag = card.querySelector(".btn-flag-doc");
+    if (btnFlag) btnFlag.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openFlagIssueModal(docKey);
     });
 
     if (isUnresolved && !isNotApplicable) {
@@ -1270,7 +1295,61 @@ function closeDocInspector() {
   state.selectedDocId = null;
 }
 
-async function setDocOverride(participantId, docKey, humanStatus, note = "") {
+function openFlagIssueModal(docKey) {
+  const p = state.participants.find(x => (x.enterpriseFolderId === state.selectedParticipantId || x.id === state.selectedParticipantId));
+  if (!p) return;
+
+  state.flaggingDocKey = docKey;
+  const doc = p.requirements[docKey] || { files: [] };
+  const files = doc.files || [];
+  const topFile = files.length > 0 ? files[0] : null;
+  const fname = topFile ? topFile.name : "No candidate document detected";
+
+  document.getElementById("flag-modal-req-name").textContent = CANONICAL_REQUIREMENTS[docKey] || docKey;
+  document.getElementById("flag-modal-filename").textContent = `Matched file: ${fname}`;
+
+  // Check if GROUP personal requirement
+  const memGroup = document.getElementById("flag-modal-member-group");
+  const memRadios = document.getElementById("flag-modal-member-radios");
+
+  if (p.applicantType === "GROUP" && ["validId", "proofOfResidency", "photo2x2"].includes(docKey) && p.groupMembers && p.groupMembers.length > 0) {
+    memGroup.classList.remove("hidden");
+    memRadios.innerHTML = p.groupMembers.map((m, idx) => `
+      <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; background:#1f2937; padding:4px 8px; border-radius:4px; border:1px solid #374151;">
+        <input type="radio" name="flag-target-member" value="${escapeHtml(m)}" ${idx === 0 ? 'checked' : ''} />
+        <span style="font-weight:600;">${escapeHtml(m)}</span>
+      </label>
+    `).join("");
+  } else {
+    memGroup.classList.add("hidden");
+    memRadios.innerHTML = "";
+  }
+
+  // Pre-fill reviewer name
+  const savedName = localStorage.getItem("yfc_reviewer_name") || "";
+  const nameInput = document.getElementById("flag-modal-reviewer-name");
+  if (nameInput) nameInput.value = savedName;
+
+  document.getElementById("flag-modal-reason-select").value = "Wrong document";
+  const noteTextarea = document.getElementById("flag-modal-reviewer-note");
+  noteTextarea.value = "";
+
+  const btnSubmit = document.getElementById("btn-submit-flag");
+  btnSubmit.disabled = true;
+
+  noteTextarea.oninput = () => {
+    btnSubmit.disabled = noteTextarea.value.trim() === "";
+  };
+
+  document.getElementById("modal-flag-issue-overlay").classList.remove("hidden");
+}
+
+function closeFlagIssueModal() {
+  document.getElementById("modal-flag-issue-overlay").classList.add("hidden");
+  state.flaggingDocKey = null;
+}
+
+async function setDocOverride(participantId, docKey, humanStatus, note = "", targetMember = null) {
   const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.id === participantId));
   if (!p || !p.requirements[docKey]) return;
 
@@ -1282,7 +1361,8 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
 
   // Get reviewer name entered by user
   const nameInput = document.getElementById("modal-reviewer-name");
-  let reviewerName = nameInput && nameInput.value.trim() !== "" ? nameInput.value.trim() : (localStorage.getItem("yfc_reviewer_name") || "Operational Reviewer");
+  const flagNameInput = document.getElementById("flag-modal-reviewer-name");
+  let reviewerName = flagNameInput && flagNameInput.value.trim() !== "" ? flagNameInput.value.trim() : (nameInput && nameInput.value.trim() !== "" ? nameInput.value.trim() : (localStorage.getItem("yfc_reviewer_name") || "Operational Reviewer"));
   
   // Store name in localStorage for reviewer convenience
   localStorage.setItem("yfc_reviewer_name", reviewerName);
@@ -1300,11 +1380,14 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
     reviewedBy: reviewerName,
     reviewedAt: new Date().toISOString(),
     note: note,
-    fileId: fileId
+    fileId: fileId,
+    targetMember: targetMember
   };
 
+  const overrideKey = targetMember ? `${docKey}_${targetMember}` : docKey;
+
   // Create local history entry log
-  const histKey = `${primaryFolderId}_${docKey}`;
+  const histKey = `${primaryFolderId}_${overrideKey}`;
   if (!state.reviewHistory[histKey]) state.reviewHistory[histKey] = [];
   
   const historyItem = {
@@ -1312,102 +1395,73 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "") {
     previousStatus: previousStatus,
     newStatus: humanStatus,
     reviewerName: reviewerName,
-    notes: note,
+    notes: targetMember ? `[Member: ${targetMember}] ${note}` : note,
+    targetMember: targetMember,
     createdAt: new Date().toISOString()
   };
   
   // Add to top of history list (newest first)
   state.reviewHistory[histKey].unshift(historyItem);
+  if (targetMember) {
+    const parentHistKey = `${primaryFolderId}_${docKey}`;
+    if (!state.reviewHistory[parentHistKey]) state.reviewHistory[parentHistKey] = [];
+    state.reviewHistory[parentHistKey].unshift(historyItem);
+  }
 
   // 1. Update local state fallback immediately
   if (!state.overrides[primaryFolderId]) state.overrides[primaryFolderId] = {};
-  state.overrides[primaryFolderId][docKey] = reviewPayload;
+  state.overrides[primaryFolderId][overrideKey] = reviewPayload;
   saveLocalOverrides();
 
-  // 2. Persist to Supabase (upsert latest decision + insert immutable history log)
-  console.log("[PERSISTENCE] setDocOverride called:", {
-    enterpriseName: p.name,
-    enterprise_folder_id: primaryFolderId,
-    enterprise_id: p.id,
-    requirement_id: docKey,
-    human_status: humanStatus,
-    reviewer_name: reviewerName,
-    supabaseClient_exists: !!supabaseClient,
-    supabaseClient_type: supabaseClient ? typeof supabaseClient.from : "null"
-  });
-
+  // 2. Persist to Supabase
   if (supabaseClient) {
     try {
-      // Upsert current decision using enterprise_folder_id + requirement_id
-      console.log("[PERSISTENCE] Attempting UPSERT to human_reviews...");
-      const upsertResult = await supabaseClient
+      await supabaseClient
         .from('human_reviews')
         .upsert({
           enterprise_folder_id: primaryFolderId,
           enterprise_id: p.id,
-          requirement_id: docKey,
+          requirement_id: overrideKey,
           file_id: fileId,
           automated_status: doc.automatedStatus || doc.status,
           human_status: humanStatus,
           reviewer_name: reviewerName,
-          reviewer_notes: note,
+          reviewer_notes: targetMember ? `[Member: ${targetMember}] ${note}` : note,
           updated_at: new Date().toISOString()
         }, { onConflict: 'enterprise_id,requirement_id' });
 
-      console.log("[PERSISTENCE] UPSERT result:", {
-        data: upsertResult.data,
-        error: upsertResult.error,
-        status: upsertResult.status,
-        statusText: upsertResult.statusText
-      });
-
-      if (upsertResult.error) {
-        console.error("[PERSISTENCE] UPSERT ERROR:", upsertResult.error);
-      }
-
-      // Insert immutable audit history record
-      console.log("[PERSISTENCE] Attempting INSERT to human_review_history...");
-      const histResult = await supabaseClient
+      await supabaseClient
         .from('human_review_history')
         .insert({
           enterprise_folder_id: primaryFolderId,
           enterprise_id: p.id,
-          requirement_id: docKey,
+          requirement_id: overrideKey,
           file_id: fileId,
           previous_status: previousStatus,
           new_status: humanStatus,
           reviewer_name: reviewerName,
-          reviewer_notes: note,
+          reviewer_notes: targetMember ? `[Member: ${targetMember}] ${note}` : note,
           created_at: new Date().toISOString()
         });
-
-      console.log("[PERSISTENCE] HISTORY INSERT result:", {
-        data: histResult.data,
-        error: histResult.error,
-        status: histResult.status
-      });
-
-      if (histResult.error) {
-        console.error("[PERSISTENCE] HISTORY INSERT ERROR:", histResult.error);
-        showToast(`Saved locally (history insert failed: ${histResult.error.message})`, "error");
-      } else {
-        showToast(`Review decision & audit history saved to Supabase! ✓ (Reviewer: ${reviewerName})`, "success");
-      }
     } catch (err) {
       console.error("[PERSISTENCE] Supabase execution error:", err);
-      showToast("Saved locally (Supabase sync failed)", "info");
     }
-  } else {
-    console.warn("[PERSISTENCE] supabaseClient is NULL - cannot persist to Supabase");
-    showToast(`Decision saved locally ✓ (Entered by: ${reviewerName})`, "info");
   }
 
   if (btnApprove) btnApprove.disabled = false;
   if (btnReject) btnReject.disabled = false;
   if (btnFlag) btnFlag.disabled = false;
 
+  if (targetMember && p.memberDetails && p.memberDetails[targetMember] && p.memberDetails[targetMember][docKey]) {
+    p.memberDetails[targetMember][docKey].status = humanStatus;
+    p.memberDetails[targetMember][docKey].review = reviewPayload;
+  }
+
   doc.review = reviewPayload;
-  doc.status = humanStatus;
+  if (!targetMember) {
+    doc.status = humanStatus;
+  }
+  
   recalculateEnterpriseScores(p);
 
   applyFiltersAndRender();
@@ -1764,8 +1818,44 @@ function initEventListeners() {
     if (e.target.id === "doc-modal-overlay") closeDocInspector();
   });
 
+  document.getElementById("btn-close-flag-modal").addEventListener("click", closeFlagIssueModal);
+  document.getElementById("btn-cancel-flag").addEventListener("click", closeFlagIssueModal);
+  document.getElementById("modal-flag-issue-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "modal-flag-issue-overlay") closeFlagIssueModal();
+  });
+
+  document.getElementById("btn-submit-flag").addEventListener("click", async () => {
+    if (!state.selectedParticipantId || !state.flaggingDocKey) return;
+    const p = state.participants.find(x => (x.enterpriseFolderId === state.selectedParticipantId || x.id === state.selectedParticipantId));
+    if (!p) return;
+
+    const docKey = state.flaggingDocKey;
+    const reason = document.getElementById("flag-modal-reason-select").value;
+    const noteText = document.getElementById("flag-modal-reviewer-note").value.trim();
+    const reviewerNameInput = document.getElementById("flag-modal-reviewer-name").value.trim();
+    const reviewerName = reviewerNameInput !== "" ? reviewerNameInput : (localStorage.getItem("yfc_reviewer_name") || "Operational Reviewer");
+    
+    localStorage.setItem("yfc_reviewer_name", reviewerName);
+
+    // Check target member if GROUP personal requirement
+    let targetMember = null;
+    if (p.applicantType === "GROUP" && ["validId", "proofOfResidency", "photo2x2"].includes(docKey)) {
+      const selectedRadio = document.querySelector('input[name="flag-target-member"]:checked');
+      if (selectedRadio) targetMember = selectedRadio.value;
+    }
+
+    const fullNote = `Reason: ${reason}. Note: ${noteText}`;
+
+    closeFlagIssueModal();
+    showToast(`Flagging issue for ${CANONICAL_REQUIREMENTS[docKey]}...`, "info");
+
+    await setDocOverride(p.enterpriseFolderId || p.id, docKey, "NEEDS_REVIEW", fullNote, targetMember);
+    showToast(`Issue flagged! Moved to Needs Review ✓`, "warning");
+  });
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      closeFlagIssueModal();
       closeDocInspector();
       closeDrawer();
     }
