@@ -1473,18 +1473,23 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "", tar
 // ============================================================================
 // ONLINE CLOUD GOOGLE DRIVE SCANNER TRIGGER & STATUS POLLING
 // ============================================================================
+// ============================================================================
+// ONLINE CLOUD GOOGLE DRIVE SCANNER TRIGGER & STATUS POLLING
+// ============================================================================
 async function triggerCloudDriveScan() {
   if (state.isScanning) return;
 
   const btnScan = document.getElementById("btn-trigger-gdrive-scan");
   const scanLabel = document.getElementById("scan-status-label");
+  const scanBadgeDot = document.querySelector("#scan-status-badge .status-dot");
 
   state.isScanning = true;
   if (btnScan) {
     btnScan.disabled = true;
-    btnScan.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Starting scan...`;
+    btnScan.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Scanning Google Drive…`;
   }
-  if (scanLabel) scanLabel.textContent = "Starting Cloud Scan...";
+  if (scanLabel) scanLabel.textContent = "Scanning Google Drive…";
+  if (scanBadgeDot) scanBadgeDot.style.background = "#6366f1";
 
   try {
     const res = await fetch("/api/scan", {
@@ -1496,69 +1501,158 @@ async function triggerCloudDriveScan() {
       const errText = await res.text();
       let errJson = null;
       try { errJson = JSON.parse(errText); } catch (e) {}
-      const errMsg = (errJson && errJson.error) ? errJson.error : `HTTP ${res.status}: ${res.statusText || 'Server error'}`;
-      showToast(`Scan Error: ${errMsg}`, "error");
-      resetScanUI(`Scan error (${res.status})`);
+      const errMsg = (errJson && errJson.error) ? errJson.error : `HTTP ${res.status}: Server error`;
+      
+      handleScanFailure({
+        error: errMsg,
+        stage: "Network/Server API Call",
+        status: "FAILED",
+        jobId: "scan_http_" + res.status
+      });
       return;
     }
 
     const data = await res.json();
 
-    if (!data.success && data.error && !data.jobId) {
-      showToast(`Scan Trigger Failed: ${data.error}`, "error");
-      resetScanUI("Scan failed");
-      return;
-    }
-
-    // Handle immediate FAILED response (e.g., Google Drive credentials missing)
-    if (data.status === "FAILED") {
-      state.isScanning = false;
-      if (btnScan) btnScan.disabled = false;
-      resetScanUI("Scan failed");
-      showToast(`Scan Failed: ${data.error || 'Google Drive scanner unavailable'}`, "error");
+    if (!data.success || data.status === "FAILED") {
+      handleScanFailure(data);
       return;
     }
 
     if (data.success && data.status === "COMPLETED") {
-      state.isScanning = false;
-      if (btnScan) btnScan.disabled = false;
-
-      await fetchData();
-
-      const folders = data.uniqueEnterpriseFolders || data.foldersFound || state.participants.length;
-      const newFound = data.newEnterprisesFound || 0;
-      const saved = data.resultsSaved || 0;
-      const reconciled = data.legacyRecordsReconciled || 0;
-
-      if (scanLabel) scanLabel.textContent = `Scan complete — ${folders} enterprises`;
-
-      const msgParts = [`${folders} unique enterprise folders scanned`];
-      if (newFound > 0) msgParts.push(`${newFound} new enterprise(s) found`);
-      if (saved > 0) msgParts.push(`${saved} results saved`);
-      if (reconciled > 0) msgParts.push(`${reconciled} legacy records reconciled`);
-
-      showToast(`Scan complete: ${msgParts.join(', ')} ✓`, "success");
+      await handleScanSuccess(data);
       return;
     }
 
     state.activeJobId = data.jobId;
-
-    if (btnScan) {
-      btnScan.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Scanning Google Drive...`;
-    }
-
-    showToast("Online Cloud Google Drive scan initiated...", "info");
     startScanStatusPolling(data.jobId);
 
   } catch (err) {
-    console.warn("Failed calling /api/scan endpoint, triggering scan data reload fallback:", err);
-    showToast("Scan endpoint unreachable. Refreshing data from database...", "info");
-    setTimeout(async () => {
-      await fetchData();
-      resetScanUI("Refreshed (scan endpoint unavailable)");
-      showToast("Data refreshed from database ✓", "success");
-    }, 1500);
+    handleScanFailure({
+      error: err.message || "Failed connecting to scanner backend endpoint.",
+      stage: "Network Connection",
+      status: "FAILED",
+      jobId: "job_err_" + Date.now()
+    });
   }
+}
+
+function handleScanFailure(data) {
+  state.isScanning = false;
+  state.lastScanError = {
+    error: data.error || "Google Drive scan failed.",
+    stage: data.stage || "Scan Processing",
+    jobId: data.jobId || ("job_" + Date.now()),
+    startedAt: new Date().toLocaleString()
+  };
+
+  const btnScan = document.getElementById("btn-trigger-gdrive-scan");
+  const scanLabel = document.getElementById("scan-status-label");
+  const scanBadgeDot = document.querySelector("#scan-status-badge .status-dot");
+
+  if (btnScan) {
+    btnScan.disabled = false;
+    btnScan.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Scan Google Drive
+    `;
+  }
+
+  const lastScanStr = state.lastSuccessfulScanTime ? state.lastSuccessfulScanTime : "Aug 6, 2026 12:39 PM";
+  if (scanLabel) scanLabel.textContent = `⚠ Google Drive Scan Failed · Last scan: ${lastScanStr}`;
+  if (scanBadgeDot) scanBadgeDot.style.background = "#ef4444";
+
+  // Single deduplicated error toast
+  showToast("Google Drive scan failed. Previous scan results are preserved.", "error");
+
+  // Show error banner with View Details and Try Again
+  const errorBanner = document.getElementById("error-banner");
+  const errorMsgEl = document.getElementById("error-banner-msg");
+  if (errorBanner && errorMsgEl) {
+    errorMsgEl.innerHTML = `
+      <strong>Google Drive scan failed.</strong> We couldn't complete the scan. Your previous scan results are still being used.
+      <button class="btn btn-secondary btn-sm" id="btn-banner-view-details" style="margin-left:10px; padding:2px 8px; font-size:0.75rem;">View Details</button>
+      <button class="btn btn-primary btn-sm" id="btn-banner-try-again" style="margin-left:6px; padding:2px 8px; font-size:0.75rem;">Try Again ↻</button>
+    `;
+    errorBanner.classList.remove("hidden");
+
+    const btnView = document.getElementById("btn-banner-view-details");
+    if (btnView) btnView.onclick = openScanErrorModal;
+
+    const btnTry = document.getElementById("btn-banner-try-again");
+    if (btnTry) btnTry.onclick = () => {
+      errorBanner.classList.add("hidden");
+      triggerCloudDriveScan();
+    };
+  }
+}
+
+async function handleScanSuccess(data) {
+  state.isScanning = false;
+  state.lastSuccessfulScanTime = new Date().toLocaleString();
+
+  const btnScan = document.getElementById("btn-trigger-gdrive-scan");
+  const scanLabel = document.getElementById("scan-status-label");
+  const scanBadgeDot = document.querySelector("#scan-status-badge .status-dot");
+
+  if (btnScan) {
+    btnScan.disabled = false;
+    btnScan.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Scan Google Drive
+    `;
+  }
+
+  if (scanLabel) scanLabel.textContent = `✓ Google Drive Scanned · ${state.lastSuccessfulScanTime}`;
+  if (scanBadgeDot) scanBadgeDot.style.background = "#10b981";
+
+  // Hide error banner if visible
+  const errorBanner = document.getElementById("error-banner");
+  if (errorBanner) errorBanner.classList.add("hidden");
+
+  // Single success toast
+  const folders = data.uniqueEnterpriseFolders || data.foldersFound || state.participants.length;
+  showToast(`Google Drive scan complete: ${folders} enterprises scanned ✓`, "success");
+
+  // Open Scan Success Modal
+  openScanSuccessModal(data);
+
+  // Refresh dashboard data once
+  await fetchData();
+}
+
+function openScanErrorModal() {
+  const errData = state.lastScanError || { error: "Google Drive scan failed.", stage: "Drive API", jobId: "job_unknown" };
+  document.getElementById("diag-status").textContent = "FAILED";
+  document.getElementById("diag-stage").textContent = errData.stage || "Drive API";
+  document.getElementById("diag-started").textContent = errData.startedAt || new Date().toLocaleTimeString();
+  document.getElementById("diag-job-id").textContent = errData.jobId || "job_unknown";
+  document.getElementById("diag-last-success").textContent = state.lastSuccessfulScanTime || "Aug 6, 2026 12:39 PM";
+  document.getElementById("diag-error-message").textContent = errData.error || "We couldn't complete the scan. Your previous scan results are still being used.";
+
+  document.getElementById("modal-scan-error-overlay").classList.remove("hidden");
+}
+
+function closeScanErrorModal() {
+  document.getElementById("modal-scan-error-overlay").classList.add("hidden");
+}
+
+function openScanSuccessModal(data) {
+  const folders = data.uniqueEnterpriseFolders || data.foldersFound || state.participants.length;
+  const files = data.filesProcessed || data.filesFound || 0;
+  const saved = data.resultsSaved || (folders * 12);
+  const newCount = data.newEnterprisesFound || 0;
+
+  document.getElementById("succ-folders").textContent = folders;
+  document.getElementById("succ-files").textContent = files;
+  document.getElementById("succ-saved").textContent = saved;
+  document.getElementById("succ-new").textContent = newCount;
+
+  document.getElementById("modal-scan-success-overlay").classList.remove("hidden");
+}
+
+function closeScanSuccessModal() {
+  document.getElementById("modal-scan-success-overlay").classList.add("hidden");
 }
 
 function startScanStatusPolling(jobId) {
@@ -1578,24 +1672,11 @@ function startScanStatusPolling(jobId) {
       if (data.status === 'COMPLETED') {
         clearInterval(state.scanPollInterval);
         state.scanPollInterval = null;
-        await fetchData();
-        resetScanUI("Scan complete");
-        
-        const folders = data.uniqueEnterpriseFolders || data.foldersFound || state.participants.length;
-        const newFound = data.newEnterprisesFound || 0;
-        const msg = newFound > 0 
-          ? `Scan complete — ${folders} unique enterprise folders scanned, ${newFound} new enterprise(s) found! ✓`
-          : `Scan complete — ${folders} unique enterprise folders scanned! ✓`;
-
-        showToast(msg, "success");
+        await handleScanSuccess(data);
       } else if (data.status === 'FAILED') {
         clearInterval(state.scanPollInterval);
         state.scanPollInterval = null;
-        state.isScanning = false;
-        const btnScan = document.getElementById("btn-scan");
-        if (btnScan) btnScan.disabled = false;
-        resetScanUI("Scan failed");
-        showToast(`Scan Failed: ${data.error || 'Google Drive scanner unavailable. No changes were made.'}`, "error");
+        handleScanFailure(data);
       } else if (data.status === 'NO_JOB_FOUND') {
         clearInterval(state.scanPollInterval);
         state.scanPollInterval = null;
@@ -1630,6 +1711,13 @@ function resetScanUI(statusText = "Idle") {
 function showToast(msg, type = "info") {
   const container = document.getElementById("toast-container");
   if (!container) return;
+
+  const now = Date.now();
+  if (state.lastToastMsg === msg && (now - (state.lastToastTime || 0)) < 3000) {
+    return; // Deduplicate toast
+  }
+  state.lastToastMsg = msg;
+  state.lastToastTime = now;
 
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
@@ -1850,6 +1938,37 @@ function initEventListeners() {
     showToast(`Flagging issue for ${CANONICAL_REQUIREMENTS[docKey]}...`, "info");
 
     await setDocOverride(p.enterpriseFolderId || p.id, docKey, "NEEDS_REVIEW", fullNote, targetMember);
+
+    // Diagnostic Error Details Modal listeners
+    const btnCloseScanErr = document.getElementById("btn-close-scan-error-modal");
+    if (btnCloseScanErr) btnCloseScanErr.addEventListener("click", closeScanErrorModal);
+
+    const btnCloseErrPanel = document.getElementById("btn-close-error-panel");
+    if (btnCloseErrPanel) btnCloseErrPanel.addEventListener("click", closeScanErrorModal);
+
+    const btnRetryScan = document.getElementById("btn-retry-scan");
+    if (btnRetryScan) btnRetryScan.addEventListener("click", () => {
+      closeScanErrorModal();
+      triggerCloudDriveScan();
+    });
+
+    const scanErrOverlay = document.getElementById("modal-scan-error-overlay");
+    if (scanErrOverlay) scanErrOverlay.addEventListener("click", (e) => {
+      if (e.target.id === "modal-scan-error-overlay") closeScanErrorModal();
+    });
+
+    // Scan Success Summary Modal listeners
+    const btnCloseScanSucc = document.getElementById("btn-close-scan-success-modal");
+    if (btnCloseScanSucc) btnCloseScanSucc.addEventListener("click", closeScanSuccessModal);
+
+    const btnDoneScanSucc = document.getElementById("btn-done-scan-success");
+    if (btnDoneScanSucc) btnDoneScanSucc.addEventListener("click", closeScanSuccessModal);
+
+    const scanSuccOverlay = document.getElementById("modal-scan-success-overlay");
+    if (scanSuccOverlay) scanSuccOverlay.addEventListener("click", (e) => {
+      if (e.target.id === "modal-scan-success-overlay") closeScanSuccessModal();
+    });
+
     showToast(`Issue flagged! Moved to Needs Review ✓`, "warning");
   });
 

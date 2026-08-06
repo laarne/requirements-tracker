@@ -82,7 +82,13 @@ module.exports = async (req, res) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  let jobId = 'job_' + Date.now();
+  let job = null;
+  let currentStage = 'INIT';
+
   try {
+    console.log(`[SCAN] [${jobId}] Started - Stage: ${currentStage}`);
+
     // 1. Rate-limiting check: Prevent duplicate concurrent scans
     const { data: runningJobs } = await supabase
       .from('scan_jobs')
@@ -91,16 +97,18 @@ module.exports = async (req, res) => {
       .gt('started_at', new Date(Date.now() - 3 * 60 * 1000).toISOString());
 
     if (runningJobs && runningJobs.length > 0) {
+      console.log(`[SCAN] [${jobId}] Concurrent scan prevented - active job: ${runningJobs[0].id}`);
       return res.status(200).json({
         success: false,
-        error: "A scan is already in progress.",
+        error: "A Google Drive scan is already in progress.",
         jobId: runningJobs[0].id,
         status: "RUNNING"
       });
     }
 
     // 2. Create scan job record
-    const { data: job, error: jobErr } = await supabase
+    currentStage = 'JOB_CREATION';
+    const { data: jobData, error: jobErr } = await supabase
       .from('scan_jobs')
       .insert({
         status: 'RUNNING',
@@ -109,10 +117,15 @@ module.exports = async (req, res) => {
       .select()
       .single();
 
-    if (jobErr) console.warn("Job record creation warning:", jobErr);
-    const jobId = job ? job.id : ('job_' + Date.now());
+    if (jobErr) console.warn("[SCAN] Job record creation warning:", jobErr.message);
+    if (jobData) {
+      job = jobData;
+      jobId = jobData.id;
+    }
 
     // 3. Connect to Google Drive API
+    currentStage = 'AUTHENTICATION';
+    console.log(`[SCAN] [${jobId}] Google Drive authentication - Connecting to Google Drive API...`);
     let driveService = null;
     let authError = null;
 
@@ -120,7 +133,7 @@ module.exports = async (req, res) => {
       driveService = getGoogleDriveService();
     } catch (authErr) {
       authError = authErr.message;
-      console.warn("Google Drive Service initialization warning:", authErr.message);
+      console.warn("[SCAN] Google Drive Service initialization warning:", authErr.message);
     }
 
     // Diagnostic Counters
@@ -141,209 +154,141 @@ module.exports = async (req, res) => {
 
     let scannedParticipants = [];
 
-    if (driveService) {
-      // REAL GOOGLE DRIVE API ENUMERATION & CLOUD SCAN
-      const gdriveFolders = await listChildFolders(driveService, MASTER_FOLDER_ID);
-      foldersFound = gdriveFolders.length;
-
-      // Ensure stable enterprise identity by folder ID
-      const folderMap = new Map();
-      gdriveFolders.forEach(f => {
-        if (!folderMap.has(f.id)) {
-          folderMap.set(f.id, f);
-        }
-      });
-      uniqueFolderIdsCount = folderMap.size;
-
-      // Check near-duplicate folder names across DIFFERENT folder IDs for diagnostic flagging
-      const normNameSet = new Map();
-      folderMap.forEach((folder, folderId) => {
-        const norm = normalizeNameForComparison(folder.name);
-        if (normNameSet.has(norm)) {
-          possibleDuplicatesCount++;
-        } else {
-          normNameSet.set(norm, folderId);
-        }
-      });
-
-      // Get existing scan_results to check for new enterprises & legacy records
-      const { data: existingScanData } = await supabase.from('scan_results').select('enterprise_folder_id, enterprise_id');
-      const existingFolderIds = new Set((existingScanData || []).map(r => r.enterprise_folder_id || r.enterprise_id));
-
-      const folderEntries = Array.from(folderMap.entries());
-      const BATCH_SIZE = 5;
-
-      for (let i = 0; i < folderEntries.length; i += BATCH_SIZE) {
-        const batch = folderEntries.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async ([folderId, folder]) => {
-          const entId = deriveEnterpriseId(folder.name);
-          const isNew = !existingFolderIds.has(folderId) && !existingFolderIds.has(entId);
-          if (isNew) newEnterprisesCount++;
-
-          console.log(`[FOLDER_DIAG] PROCESSING: name="${folder.name}" id="${folderId}" entId="${entId}" isNew=${isNew}`);
-
-          const files = await listFilesInFolder(driveService, folderId);
-          filesFound += files.length;
-          filesProcessed += files.length;
-
-          console.log(`[FOLDER_DIAG]   Files in folder: ${files.length}`);
-          files.forEach(f => {
-            console.log(`[FOLDER_DIAG]     File: "${f.name}" mimeType="${f.mimeType}" size="${f.size}" id="${f.id}"`);
-          });
-
-          const applicantType = determineApplicantType(folder.name, files);
-          const reqs = processFilesForRequirements(files, applicantType);
-
-          console.log(`[FOLDER_DIAG]   applicantType=${applicantType}`);
-
-          scannedParticipants.push({
-            enterpriseFolderId: folderId,
-            id: entId,
-            name: folder.name,
-            applicantType: applicantType,
-            driveUrl: folder.webViewLink || `https://drive.google.com/drive/folders/${folderId}`,
-            driveFolderId: folderId,
-            requirements: reqs
-          });
-        }));
-      }
-
-      console.log(`[FOLDER_DIAG] SCAN COMPLETE: ${scannedParticipants.length} enterprises processed from ${folderMap.size} unique folders (from ${gdriveFolders.length} raw API results)`);
-    }
-
-    // CRITICAL: If Google Drive is unavailable or returned 0 folders, FAIL EXPLICITLY
-    // Do NOT generate fake data. Do NOT overwrite existing scan_results.
     if (!driveService) {
-      const errorMsg = "Google Drive scanner unavailable: Google Drive API credentials are not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON in Vercel environment variables.";
-      console.error(errorMsg);
+      const errorMsg = "Google Drive API credentials are not configured. Set GOOGLE_SERVICE_ACCOUNT_JSON in Vercel environment variables.";
+      console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errorMsg}`);
 
-      if (job) {
-        await supabase
-          .from('scan_jobs')
-          .update({
-            status: 'FAILED',
-            completed_at: new Date().toISOString(),
-            folders_found: 0,
-            unique_enterprise_folders: 0,
-            files_found: 0,
-            files_processed: 0,
-            results_saved: 0,
-            error_message: errorMsg
-          })
-          .eq('id', job.id);
+      if (job && job.id) {
+        try {
+          await supabase
+            .from('scan_jobs')
+            .update({
+              status: 'FAILED',
+              completed_at: new Date().toISOString(),
+              error_message: errorMsg
+            })
+            .eq('id', job.id);
+        } catch (e) {}
       }
 
       return res.status(200).json({
         success: false,
         jobId: jobId,
         status: "FAILED",
-        error: errorMsg,
+        stage: currentStage,
+        error: "Google Drive authentication failed: Credentials missing or invalid.",
         foldersFound: 0,
         filesFound: 0,
         resultsSaved: 0
       });
     }
+
+    // REAL GOOGLE DRIVE API ENUMERATION & CLOUD SCAN
+    currentStage = 'ROOT_DISCOVERY';
+    console.log(`[SCAN] [${jobId}] Root folder discovery - Root folder ID: ${MASTER_FOLDER_ID}`);
+    const gdriveFolders = await listChildFolders(driveService, MASTER_FOLDER_ID);
+    foldersFound = gdriveFolders.length;
 
     if (foldersFound === 0) {
-      const errorMsg = `Google Drive scan found 0 enterprise folders under master folder ${MASTER_FOLDER_ID}. Verify the master folder ID is correct and the service account has access.`;
-      console.error(errorMsg);
+      const errorMsg = `Google Drive scan found 0 enterprise folders under master folder ${MASTER_FOLDER_ID}.`;
+      console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errorMsg}`);
 
-      if (job) {
-        await supabase
-          .from('scan_jobs')
-          .update({
-            status: 'FAILED',
-            completed_at: new Date().toISOString(),
-            folders_found: 0,
-            unique_enterprise_folders: 0,
-            files_found: 0,
-            files_processed: 0,
-            results_saved: 0,
-            error_message: errorMsg
-          })
-          .eq('id', job.id);
+      if (job && job.id) {
+        try {
+          await supabase
+            .from('scan_jobs')
+            .update({
+              status: 'FAILED',
+              completed_at: new Date().toISOString(),
+              error_message: errorMsg
+            })
+            .eq('id', job.id);
+        } catch (e) {}
       }
 
       return res.status(200).json({
         success: false,
         jobId: jobId,
         status: "FAILED",
-        error: errorMsg,
+        stage: currentStage,
+        error: "Google Drive root folder query returned zero enterprise folders.",
         foldersFound: 0,
         filesFound: 0,
         resultsSaved: 0
       });
     }
 
-    // 4. Reconcile Legacy DB Records & Idempotent Upsert to Supabase scan_results
-    // Only reached when we have REAL Google Drive data
-    const validFolderIds = new Set(scannedParticipants.map(p => p.enterpriseFolderId));
+    currentStage = 'FOLDER_ENUMERATION';
+    console.log(`[SCAN] [${jobId}] Enterprise folder discovery - Found ${foldersFound} folders`);
 
-    // A. Reconcile Human Reviews to point to enterprise_folder_id
-    const { data: humanRevs } = await supabase.from('human_reviews').select('*');
-    if (humanRevs && humanRevs.length > 0) {
-      humanReviewsPreservedCount = humanRevs.length;
-      for (const rev of humanRevs) {
-        const resolvedFolderId = resolveToRealFolderId(
-          rev.enterprise_folder_id, rev.enterprise_id, null, dataJsonMap
-        );
-        if (resolvedFolderId && resolvedFolderId !== rev.enterprise_folder_id) {
-          await supabase
-            .from('human_reviews')
-            .update({ enterprise_folder_id: resolvedFolderId })
-            .eq('id', rev.id);
-          legacyRecordsReconciled++;
-        } else if (!rev.enterprise_folder_id && resolvedFolderId) {
-          await supabase
-            .from('human_reviews')
-            .update({ enterprise_folder_id: resolvedFolderId })
-            .eq('id', rev.id);
-          legacyRecordsReconciled++;
-        }
+    // Ensure stable enterprise identity by folder ID
+    const folderMap = new Map();
+    gdriveFolders.forEach(f => {
+      if (!folderMap.has(f.id)) {
+        folderMap.set(f.id, f);
       }
+    });
+    uniqueFolderIdsCount = folderMap.size;
+
+    // Check near-duplicate folder names across DIFFERENT folder IDs for diagnostic flagging
+    const normNameSet = new Map();
+    folderMap.forEach((folder, folderId) => {
+      const norm = normalizeNameForComparison(folder.name);
+      if (normNameSet.has(norm)) {
+        possibleDuplicatesCount++;
+      } else {
+        normNameSet.set(norm, folderId);
+      }
+    });
+
+    // Get existing scan_results to check for new enterprises
+    const { data: existingScanData } = await supabase.from('scan_results').select('enterprise_folder_id, enterprise_id');
+    const existingFolderIds = new Set((existingScanData || []).map(r => r.enterprise_folder_id || r.enterprise_id));
+
+    currentStage = 'FILE_ENUMERATION_AND_CLASSIFICATION';
+    console.log(`[SCAN] [${jobId}] File enumeration and document classification in progress...`);
+
+    const folderEntries = Array.from(folderMap.entries());
+    const BATCH_SIZE = 5;
+
+    for (let i = 0; i < folderEntries.length; i += BATCH_SIZE) {
+      const batch = folderEntries.slice(i, i + BATCH_SIZE);
+      await Promise.all(batch.map(async ([folderId, folder]) => {
+        const entId = deriveEnterpriseId(folder.name);
+        const isNew = !existingFolderIds.has(folderId) && !existingFolderIds.has(entId);
+        if (isNew) newEnterprisesCount++;
+
+        let files = [];
+        try {
+          files = await listFilesInFolder(driveService, folderId);
+        } catch (fErr) {
+          console.warn(`[SCAN WARNING] File enumeration failed for folder ${folder.name} (${folderId}):`, fErr.message);
+        }
+
+        filesFound += files.length;
+        filesProcessed += files.length;
+
+        const applicantType = determineApplicantType(folder.name, files);
+        const reqs = processFilesForRequirements(files, applicantType);
+
+        scannedParticipants.push({
+          enterpriseFolderId: folderId,
+          id: entId,
+          name: folder.name,
+          applicantType: applicantType,
+          driveUrl: folder.webViewLink || `https://drive.google.com/drive/folders/${folderId}`,
+          driveFolderId: folderId,
+          requirements: reqs
+        });
+      }));
     }
 
-    // B. Reconcile Human Review History logs
-    const { data: humanHist } = await supabase.from('human_review_history').select('*');
-    if (humanHist && humanHist.length > 0) {
-      for (const hist of humanHist) {
-        const resolvedFolderId = resolveToRealFolderId(
-          hist.enterprise_folder_id, hist.enterprise_id, null, dataJsonMap
-        );
-        if (resolvedFolderId && resolvedFolderId !== hist.enterprise_folder_id) {
-          await supabase
-            .from('human_review_history')
-            .update({ enterprise_folder_id: resolvedFolderId })
-            .eq('id', hist.id);
-        } else if (!hist.enterprise_folder_id && resolvedFolderId) {
-          await supabase
-            .from('human_review_history')
-            .update({ enterprise_folder_id: resolvedFolderId })
-            .eq('id', hist.id);
-        }
-      }
-    }
+    console.log(`[SCAN] [${jobId}] File processing complete - Scanned ${scannedParticipants.length} enterprises, ${filesProcessed} files.`);
 
-    // C. Reconcile existing scan_results with synthetic/legacy folder IDs
-    const { data: existingResults } = await supabase.from('scan_results').select('id, enterprise_folder_id, enterprise_id, enterprise_name');
-    if (existingResults && existingResults.length > 0) {
-      for (const row of existingResults) {
-        if (!isRealGoogleDriveId(row.enterprise_folder_id)) {
-          const resolvedFolderId = resolveToRealFolderId(
-            row.enterprise_folder_id, row.enterprise_id, row.enterprise_name, dataJsonMap
-          );
-          if (resolvedFolderId && resolvedFolderId !== row.enterprise_folder_id) {
-            await supabase
-              .from('scan_results')
-              .update({ enterprise_folder_id: resolvedFolderId })
-              .eq('id', row.id);
-            legacyRecordsReconciled++;
-          }
-        }
-      }
-    }
+    // STAGING RESULTS IN MEMORY (DO NOT COMMIT YET)
+    currentStage = 'STAGING_RESULTS';
+    console.log(`[SCAN] [${jobId}] Staging scan_results in memory...`);
 
-    // D. Upsert Current Scan Results
     const scanResultsToUpsert = [];
     scannedParticipants.forEach(p => {
       const folderId = p.enterpriseFolderId;
@@ -370,21 +315,34 @@ module.exports = async (req, res) => {
       });
     });
 
+    // INTEGRITY VALIDATION STEP BEFORE ANY DATABASE MUTATION
+    currentStage = 'INTEGRITY_VALIDATION';
+    console.log(`[SCAN] [${jobId}] Validating compliance dataset integrity...`);
+
+    const integrity = validateScanIntegrity(scannedParticipants, scanResultsToUpsert);
+    if (!integrity.valid) {
+      throw new Error(`Dataset integrity check failed: ${integrity.reason}`);
+    }
+
+    // DATABASE COMMIT STEP (100% ATOMIC MUTATION ONLY AFTER VALIDATION SUCCESS)
+    currentStage = 'DATABASE_COMMIT';
+    console.log(`[SCAN] [${jobId}] Committing ${scanResultsToUpsert.length} staged scan_results to Supabase...`);
+
     if (scanResultsToUpsert.length > 0) {
       const { error: upsertErr } = await supabase
         .from('scan_results')
         .upsert(scanResultsToUpsert, { onConflict: 'enterprise_folder_id,requirement_id' });
 
-      if (upsertErr) console.warn("Scan results upsert warning:", upsertErr);
+      if (upsertErr) {
+        throw new Error(`Supabase database commit error: ${upsertErr.message}`);
+      }
       resultsSaved = scanResultsToUpsert.length;
     }
 
-    // NOTE: Stale row deletion removed for safety.
-    // A successful scan upserts new data. Orphaned rows from deleted folders
-    // are handled by reconciliation, not deletion.
+    currentStage = 'COMPLETED';
+    console.log(`[SCAN] [${jobId}] Update scan_jobs status to COMPLETED`);
 
-    // 5. Update scan_jobs record with status COMPLETED and safe diagnostic metrics
-    if (job) {
+    if (job && job.id) {
       await supabase
         .from('scan_jobs')
         .update({
@@ -422,16 +380,17 @@ module.exports = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Cloud scan failed:", err);
+    const errorMsg = err.message || "Cloud scan error occurred.";
+    console.error(`[SCAN ERROR] [${jobId}] Stage: ${currentStage}, Error: ${errorMsg}`, err.stack || '');
 
-    if (job && job.id) {
+    if (supabase && job && job.id) {
       try {
         await supabase
           .from('scan_jobs')
           .update({
             status: 'FAILED',
             completed_at: new Date().toISOString(),
-            error_message: err.message || "Cloud scan error occurred."
+            error_message: `Stage: ${currentStage} - ${errorMsg}`
           })
           .eq('id', job.id);
       } catch (e) {}
@@ -441,10 +400,34 @@ module.exports = async (req, res) => {
       success: false,
       jobId: jobId,
       status: "FAILED",
-      error: err.message || "Cloud scan error occurred."
+      stage: currentStage,
+      error: `Google Drive scan failed during ${currentStage.toLowerCase().replace(/_/g, ' ')}. ${errorMsg}`
     });
   }
 };
+
+function validateScanIntegrity(participants, scanResults) {
+  if (!participants || participants.length === 0) {
+    return { valid: false, reason: "No enterprise folders scanned." };
+  }
+  if (!scanResults || scanResults.length === 0) {
+    return { valid: false, reason: "No scan results produced." };
+  }
+
+  for (const p of participants) {
+    if (!p.enterpriseFolderId || !p.name || !p.applicantType) {
+      return { valid: false, reason: `Enterprise ${p.name || 'unknown'} has missing required metadata.` };
+    }
+    if (!["INDIVIDUAL", "GROUP"].includes(p.applicantType.toUpperCase())) {
+      return { valid: false, reason: `Enterprise ${p.name} has invalid applicant type ${p.applicantType}.` };
+    }
+    if (!p.requirements || Object.keys(p.requirements).length === 0) {
+      return { valid: false, reason: `Enterprise ${p.name} has empty requirements checklist.` };
+    }
+  }
+
+  return { valid: true };
+}
 
 function getGoogleDriveService() {
   const serviceAccountEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;

@@ -494,6 +494,81 @@
     </div>
   </div>
 
+  <!-- Diagnostic Scan Error Details Modal -->
+  <div class="modal-overlay hidden" id="modal-scan-error-overlay">
+    <div class="modal scan-error-modal" style="max-width:500px; width:92%;">
+      <div class="modal-header" style="background:#7f1d1d; border-bottom:1px solid #991b1b;">
+        <div>
+          <h3 style="color:#fca5a5; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#f87171;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Google Drive Scan Failed
+          </h3>
+          <p class="subtitle" style="color:#fecaca; margin-top:2px;">Previous scan results preserved & active</p>
+        </div>
+        <button class="btn-close" id="btn-close-scan-error-modal" aria-label="Close Modal">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding:20px;">
+        <div style="background:#1f2937; padding:12px; border-radius:6px; border:1px solid #374151; margin-bottom:16px;">
+          <div style="font-size:0.75rem; color:#9ca3af; font-weight:700; text-transform:uppercase;">SCAN DIAGNOSTICS & STATUS</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; font-size:0.8rem;">
+            <div>Status: <strong style="color:#f87171;" id="diag-status">FAILED</strong></div>
+            <div>Stage: <strong style="color:#f1f5f9;" id="diag-stage">Drive Folder Query</strong></div>
+            <div>Started: <span style="color:#cbd5e1;" id="diag-started">Just now</span></div>
+            <div>Request ID: <span style="color:#818cf8; font-family:monospace;" id="diag-job-id">job_123</span></div>
+            <div>Results Preserved: <strong style="color:#34d399;">✓ Yes (Active)</strong></div>
+            <div>Last Successful Scan: <span style="color:#cbd5e1;" id="diag-last-success">--</span></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.78rem; font-weight:700; color:#cbd5e1; display:block; margin-bottom:4px;">
+            SAFE USER DIAGNOSTIC MESSAGE
+          </label>
+          <div id="diag-error-message" style="background:#0f172a; padding:12px; border-radius:6px; color:#fca5a5; font-size:0.8rem; border:1px solid #334155; white-space:pre-wrap; word-break:break-word;">
+            We couldn't complete the scan. Your previous scan results are still being used.
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+          <button class="btn btn-secondary" id="btn-close-error-panel">Close</button>
+          <button class="btn btn-primary" id="btn-retry-scan">Try Again ↻</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan Success Summary Modal -->
+  <div class="modal-overlay hidden" id="modal-scan-success-overlay">
+    <div class="modal scan-success-modal" style="max-width:460px; width:90%;">
+      <div class="modal-header" style="background:#064e3b; border-bottom:1px solid #047857;">
+        <div>
+          <h3 style="color:#6ee7b7; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#34d399;"><polyline points="20 6 9 17 4 12"/></svg>
+            Google Drive Scan Complete
+          </h3>
+          <p class="subtitle" style="color:#a7f3d0; margin-top:2px;">Scan dataset verified & committed to database</p>
+        </div>
+        <button class="btn-close" id="btn-close-scan-success-modal" aria-label="Close Modal">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding:20px;">
+        <div style="background:#1f2937; padding:14px; border-radius:6px; border:1px solid #374151; margin-bottom:16px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.85rem; color:#f1f5f9;">
+            <div>Enterprises Scanned: <strong style="color:#34d399;" id="succ-folders">19</strong></div>
+            <div>Files Processed: <strong style="color:#818cf8;" id="succ-files">182</strong></div>
+            <div>Results Saved: <strong style="color:#f59e0b;" id="succ-saved">228</strong></div>
+            <div>New Enterprises: <strong style="color:#38bdf8;" id="succ-new">0</strong></div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+          <button class="btn btn-success" id="btn-done-scan-success">Done ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
