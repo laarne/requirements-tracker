@@ -434,16 +434,25 @@ function recalculateEnterpriseScores(p) {
     let needsReviewCount = 0;
 
     applicableReqKeys.forEach(k => {
-      const st = (reqs[k].status || "MISSING").toUpperCase();
+      const doc = reqs[k];
+      const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
       if (st === "COMPLETE" || st === "APPROVED") completeCount++;
-      if (st === "MISSING") missingCount++;
-      if (st === "NEEDS_REVIEW") needsReviewCount++;
+      else if (st === "NEEDS_REVIEW") needsReviewCount++;
+      else missingCount++;
     });
 
-    p.completionRate = totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0;
-    p.completeCount = completeCount;
-    p.missingCount = missingCount;
-    p.needsReviewCount = needsReviewCount;
+    p.scores = {
+      complete: completeCount,
+      missing: missingCount,
+      needsReview: needsReviewCount,
+      total: totalApplicable,
+      percentage: totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0
+    };
+
+    p.completionRate = p.scores.percentage;
+    p.completeCount = p.scores.complete;
+    p.missingCount = p.scores.missing;
+    p.needsReviewCount = p.scores.needsReview;
     p.applicableRequirementsCount = totalApplicable;
 
     if (completeCount === totalApplicable) {
@@ -484,14 +493,22 @@ function recalculateEnterpriseScores(p) {
   const applicableSharedKeys = sharedReqKeys.filter(k => reqs[k] && reqs[k].status !== "NOT_APPLICABLE");
 
   let completedSharedCount = 0;
+  let missingSharedCount = 0;
+  let needsReviewSharedCount = 0;
+
   applicableSharedKeys.forEach(k => {
-    const st = (reqs[k].status || "MISSING").toUpperCase();
+    const doc = reqs[k];
+    const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
     if (st === "COMPLETE" || st === "APPROVED") completedSharedCount++;
+    else if (st === "NEEDS_REVIEW") needsReviewSharedCount++;
+    else missingSharedCount++;
   });
 
   p.memberDetails = {};
   let totalMemberSlots = 0;
   let completedMemberSlots = 0;
+  let missingMemberSlots = 0;
+  let needsReviewMemberSlots = 0;
 
   if (membersList.length > 0) {
     membersList.forEach(mName => {
@@ -516,37 +533,65 @@ function recalculateEnterpriseScores(p) {
         }
 
         p.memberDetails[mName][reqKey] = { status: mStatus, file: mFile };
-        if (mStatus === "COMPLETE" || mStatus === "APPROVED") {
-          completedMemberSlots++;
-        }
+        if (mStatus === "COMPLETE" || mStatus === "APPROVED") completedMemberSlots++;
+        else if (mStatus === "NEEDS_REVIEW") needsReviewMemberSlots++;
+        else missingMemberSlots++;
       });
     });
+
+    // Update requirement-level status for personal requirements based on all members' status
+    personalReqKeys.forEach(reqKey => {
+      if (reqs[reqKey]) {
+        const mStatuses = membersList.map(m => p.memberDetails[m][reqKey].status);
+        if (mStatuses.every(s => s === "COMPLETE" || s === "APPROVED")) {
+          reqs[reqKey].status = "COMPLETE";
+        } else if (mStatuses.some(s => s === "NEEDS_REVIEW")) {
+          reqs[reqKey].status = "NEEDS_REVIEW";
+        } else {
+          reqs[reqKey].status = "INCOMPLETE";
+        }
+      }
+    });
+
   } else {
     // Fallback if no specific member names are parsed yet
     personalReqKeys.forEach(reqKey => {
       totalMemberSlots++;
       const st = (reqs[reqKey]?.status || "MISSING").toUpperCase();
       if (st === "COMPLETE" || st === "APPROVED") completedMemberSlots++;
+      else if (st === "NEEDS_REVIEW") needsReviewMemberSlots++;
+      else missingMemberSlots++;
     });
   }
 
-  const totalSharedSlots = applicableSharedKeys.length;
-  const grandTotalSlots = totalSharedSlots + totalMemberSlots;
+  const grandTotalSlots = applicableSharedKeys.length + totalMemberSlots;
   const grandCompletedSlots = completedSharedCount + completedMemberSlots;
+  const grandMissingSlots = missingSharedCount + missingMemberSlots;
+  const grandNeedsReviewSlots = needsReviewSharedCount + needsReviewMemberSlots;
 
-  p.completionRate = grandTotalSlots > 0 ? Math.round((grandCompletedSlots / grandTotalSlots) * 1000) / 10 : 0.0;
-  p.completeCount = grandCompletedSlots;
+  p.scores = {
+    complete: grandCompletedSlots,
+    missing: grandMissingSlots,
+    needsReview: grandNeedsReviewSlots,
+    total: grandTotalSlots,
+    percentage: grandTotalSlots > 0 ? Math.round((grandCompletedSlots / grandTotalSlots) * 1000) / 10 : 0.0
+  };
+
+  p.completionRate = p.scores.percentage;
+  p.completeCount = p.scores.complete;
+  p.missingCount = p.scores.missing;
+  p.needsReviewCount = p.scores.needsReview;
   p.totalGroupSlots = grandTotalSlots;
   p.applicableRequirementsCount = grandTotalSlots;
 
   if (grandCompletedSlots === grandTotalSlots) {
     p.status = "COMPLETE";
     p.priority = "FULLY COMPLIANT";
-  } else if (p.completionRate < 60) {
-    p.status = "INCOMPLETE";
+  } else if (p.completionRate < 60 || grandMissingSlots >= 3) {
+    p.status = grandMissingSlots > 0 ? "INCOMPLETE" : "NEEDS_REVIEW";
     p.priority = "HIGH";
   } else {
-    p.status = "NEEDS_REVIEW";
+    p.status = grandNeedsReviewSlots > 0 ? "NEEDS_REVIEW" : "INCOMPLETE";
     p.priority = "MEDIUM";
   }
 }
