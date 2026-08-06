@@ -44,11 +44,11 @@ module.exports = async (req, res) => {
       status: job.status,
       startedAt: job.started_at,
       completedAt: job.completed_at,
-      foldersFound: job.folders_found || 16,
-      filesFound: job.files_found || 48,
-      filesProcessed: job.files_processed || 48,
-      filesTotal: job.files_total || 48,
-      resultsSaved: job.results_saved || 192,
+      foldersFound: job.folders_found || 0,
+      filesFound: job.files_found || 0,
+      filesProcessed: job.files_processed || 0,
+      filesTotal: job.files_total || 0,
+      resultsSaved: job.results_saved || 0,
       newEnterprisesFound: job.new_enterprises_found || 0,
       error: job.error_message || null
     });

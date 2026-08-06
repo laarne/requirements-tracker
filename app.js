@@ -311,44 +311,24 @@ async function fetchData() {
   // STRICTLY GROUP BY PRIMARY STABLE IDENTITY (enterprise_folder_id) TO PREVENT DUPLICATES
   const participantsMap = {};
 
-  // Seed baseline from local data.json if available
-  if (localDataset && localDataset.participants) {
-    localDataset.participants.forEach(p => {
-      const primaryKey = p.enterpriseFolderId || p.driveFolderId || p.id;
-      participantsMap[primaryKey] = JSON.parse(JSON.stringify(p));
-      participantsMap[primaryKey].enterpriseFolderId = primaryKey;
-    });
-  }
-
-  // Dynamically merge or add enterprises from Supabase scan_results keyed by enterprise_folder_id
-  // Cloud scan data is AUTHORITATIVE when available - it updates static data
-  if (cloudScanMap) {
+  // 1. If live cloud scan data is available from Supabase, populate participantsMap directly from live folder IDs
+  if (cloudScanMap && Object.keys(cloudScanMap).length > 0) {
     Object.keys(cloudScanMap).forEach(folderKey => {
       const entScan = cloudScanMap[folderKey];
-      
-      if (!participantsMap[folderKey]) {
-        // NEW ENTERPRISE DISCOVERED ONLINE (not in data.json)
-        participantsMap[folderKey] = {
-          enterpriseFolderId: folderKey,
-          id: entScan._enterpriseId || folderKey,
-          name: entScan._enterpriseName || formatEnterpriseNameFromId(folderKey),
-          applicantType: entScan._applicantType || "INDIVIDUAL",
-          driveUrl: entScan._driveUrl || `https://drive.google.com/drive/folders/${folderKey}`,
-          driveFolderId: folderKey,
-          requirements: {}
-        };
-      } else {
-        // EXISTING ENTERPRISE - cloud data is authoritative for name/type
-        if (entScan._enterpriseName) participantsMap[folderKey].name = entScan._enterpriseName;
-        if (entScan._applicantType) participantsMap[folderKey].applicantType = entScan._applicantType;
-        if (entScan._driveUrl) participantsMap[folderKey].driveUrl = entScan._driveUrl;
-      }
+      participantsMap[folderKey] = {
+        enterpriseFolderId: folderKey,
+        id: entScan._enterpriseId || folderKey,
+        name: entScan._enterpriseName || formatEnterpriseNameFromId(folderKey),
+        applicantType: entScan._applicantType || "INDIVIDUAL",
+        driveUrl: entScan._driveUrl || `https://drive.google.com/drive/folders/${folderKey}`,
+        driveFolderId: folderKey,
+        requirements: {}
+      };
 
       // Populate requirement statuses from scan_results
       Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
         const reqScan = entScan[reqKey];
         if (reqScan) {
-          if (!participantsMap[folderKey].requirements) participantsMap[folderKey].requirements = {};
           participantsMap[folderKey].requirements[reqKey] = {
             status: reqScan.automatedStatus || "MISSING",
             automatedStatus: reqScan.automatedStatus || "MISSING",
@@ -356,6 +336,17 @@ async function fetchData() {
           };
         }
       });
+    });
+  }
+
+  // 2. Overlay or seed baseline from local data.json if available
+  if (localDataset && localDataset.participants) {
+    localDataset.participants.forEach(p => {
+      const primaryKey = resolveFolderKey(p.enterpriseFolderId || p.driveFolderId, p.id, p.name, identityMap) || p.id;
+      if (!participantsMap[primaryKey]) {
+        participantsMap[primaryKey] = JSON.parse(JSON.stringify(p));
+        participantsMap[primaryKey].enterpriseFolderId = primaryKey;
+      }
     });
   }
 
@@ -367,7 +358,7 @@ async function fetchData() {
     participants: combinedParticipants
   };
 
-  processDataset(raw);
+  processDataset(raw, localDataset ? (localDataset.participants ? localDataset.participants.length : 0) : 0, cloudScanMap ? Object.keys(cloudScanMap).length : 0);
 }
 
 function formatEnterpriseNameFromId(id) {
@@ -375,7 +366,7 @@ function formatEnterpriseNameFromId(id) {
   return id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-function processDataset(raw) {
+function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
   state.rawDataset = raw;
 
   state.participants = (raw.participants || []).map(p => {
@@ -410,6 +401,18 @@ function processDataset(raw) {
     recalculateEnterpriseScores(copy);
     return copy;
   });
+
+  const diag = {
+    dataJsonCount: dataJsonCount,
+    scanResultsCount: scanResultsCount * 12,
+    uniqueScanFolderIds: scanResultsCount,
+    mergedParticipantCount: state.participants.length,
+    finalParticipantCount: state.participants.length,
+    renderedEnterpriseCount: state.participants.length,
+    enterpriseNames: state.participants.map(p => p.name),
+    enterpriseFolderIds: state.participants.map(p => p.enterpriseFolderId || p.driveFolderId || p.id)
+  };
+  console.log("[ENTERPRISE_COUNT_DIAG]", diag);
 
   updateHeaderMetadata(raw);
   applyFiltersAndRender();
