@@ -184,20 +184,35 @@ async function fetchHumanReviewsFromSupabase(identityMap) {
         resolvedKey: entKey,
         requirement_id: row.requirement_id,
         human_status: row.human_status,
-        reviewer_name: row.reviewer_name
+        reviewer_name: row.reviewer_name,
+        verification_source: row.verification_source || 'manual'
       });
-      if (!reviewsMap[entKey]) reviewsMap[entKey] = {};
-      reviewsMap[entKey][row.requirement_id] = {
+
+      const reviewEntry = {
         manualStatus: row.human_status,
         reviewedBy: row.reviewer_name || "Operational Reviewer",
-        reviewedAt: row.updated_at || row.created_at,
+        reviewedAt: row.verified_at || row.updated_at || row.created_at,
         note: row.reviewer_notes || "",
-        fileId: row.file_id || ""
+        fileId: row.file_id || "",
+        verificationSource: row.verification_source || 'manual'
       };
-      // Also map by enterprise_id for fallback resilience
-      if (row.enterprise_id && row.enterprise_id !== entKey) {
+
+      // Primary mapping: resolved folder key (handles ID translation)
+      if (!reviewsMap[entKey]) reviewsMap[entKey] = {};
+      reviewsMap[entKey][row.requirement_id] = reviewEntry;
+
+      // Direct fallback: always also map by the raw enterprise_folder_id.
+      // This guarantees human decisions are found even if resolveFolderKey
+      // makes an unexpected resolution — the raw folder ID is always the canonical key.
+      if (row.enterprise_folder_id && row.enterprise_folder_id !== entKey) {
+        if (!reviewsMap[row.enterprise_folder_id]) reviewsMap[row.enterprise_folder_id] = {};
+        reviewsMap[row.enterprise_folder_id][row.requirement_id] = reviewEntry;
+      }
+
+      // Legacy fallback: also map by enterprise_id slug for older records
+      if (row.enterprise_id && row.enterprise_id !== entKey && row.enterprise_id !== row.enterprise_folder_id) {
         if (!reviewsMap[row.enterprise_id]) reviewsMap[row.enterprise_id] = {};
-        reviewsMap[row.enterprise_id][row.requirement_id] = reviewsMap[entKey][row.requirement_id];
+        reviewsMap[row.enterprise_id][row.requirement_id] = reviewEntry;
       }
     });
 
@@ -709,15 +724,25 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
     let copy = JSON.parse(JSON.stringify(p));
     const entKey = copy.enterpriseFolderId || copy.driveFolderId || copy.id;
 
-    // Preserve automatedStatus separately from humanReview
+    // Step 1: Preserve raw Drive scan status before any human override is applied
     Object.keys(copy.requirements || {}).forEach(docKey => {
       const doc = copy.requirements[docKey];
       if (!doc.automatedStatus) {
         doc.automatedStatus = doc.status;
       }
+      // Default finalStatus = scan result; will be overridden below if human decision exists
+      doc.finalStatus = doc.automatedStatus;
+      doc.verificationSource = 'drive';
     });
 
-    const activeOverrides = state.overrides[entKey] || state.overrides[copy.id];
+    // Step 2: Resolve active human-review overrides.
+    // Try all possible keys for this enterprise so key-resolution gaps don't silently drop decisions.
+    const activeOverrides =
+      state.overrides[entKey] ||
+      state.overrides[copy.enterpriseFolderId] ||
+      state.overrides[copy.driveFolderId] ||
+      state.overrides[copy.id];
+
     if (activeOverrides) {
       if (activeOverrides._applicantType) {
         const rawAppType = activeOverrides._applicantType;
@@ -726,15 +751,29 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
       Object.keys(activeOverrides).forEach(docKey => {
         if (docKey.startsWith("_")) return;
         if (copy.requirements[docKey]) {
-          const oldStatus = copy.requirements[docKey].status;
-          copy.requirements[docKey].review = activeOverrides[docKey];
-          if (activeOverrides[docKey].manualStatus) {
-            let st = activeOverrides[docKey].manualStatus;
+          const override = activeOverrides[docKey];
+          copy.requirements[docKey].review = override;
+          if (override.manualStatus) {
+            // Human decision ALWAYS wins over Drive scan result.
+            // This is the core persistence guarantee: a rescan writes to scan_results
+            // but never touches human_reviews, so this override always survives.
+            let st = override.manualStatus;
             if (st === "NEEDS_REVIEW" || st === "REVIEW") st = "CHECK";
             copy.requirements[docKey].status = st;
+            copy.requirements[docKey].finalStatus = st;
+            copy.requirements[docKey].verificationSource = override.verificationSource || 'manual';
+            copy.requirements[docKey].reviewedBy = override.reviewedBy || '';
+            copy.requirements[docKey].reviewedAt = override.reviewedAt || '';
           }
         }
       });
+    } else {
+      // No human overrides found for this enterprise.
+      // Log a diagnostic for each enterprise that had no override key match
+      // (only if there are any loaded overrides at all, to avoid noise on cold load)
+      if (Object.keys(state.overrides).length > 0) {
+        console.log(`[MERGE] No human-review overrides found for enterprise key: ${entKey} (id=${copy.id})`);
+      }
     }
 
     recalculateEnterpriseScores(copy);
@@ -1471,13 +1510,22 @@ function openDrawer(participantId) {
     } else if (st === "MISSING" || st === "REJECTED") {
       needsAttentionCount++;
       card.style.cssText = "background:#1f2937; padding:14px; border-radius:6px; border-left:4px solid #ef4444; margin-bottom:12px;";
+
+      // Determine source label for Missing cards
+      const missingSource = docData.verificationSource === 'manual'
+        ? `<span style="font-size:0.7rem; color:#94a3b8; font-weight:500;">· Human decision</span>`
+        : `<span style="font-size:0.7rem; color:#94a3b8; font-weight:500;">· Not found in Drive</span>`;
+      const missingSubtext = docData.verificationSource === 'manual'
+        ? `Marked missing by ${escapeHtml(docData.reviewedBy || 'reviewer')}.`
+        : `No matching document found in Google Drive.`;
+
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-weight:700; color:#f87171; font-size:0.95rem;">✕ ${escapeHtml(docName)}</span>
-          <span style="font-size:0.75rem; background:#374151; color:#f87171; padding:2px 8px; border-radius:4px; font-weight:600;">Missing</span>
+          <span style="font-size:0.75rem; background:#374151; color:#f87171; padding:2px 8px; border-radius:4px; font-weight:600;">Missing ${missingSource}</span>
         </div>
         <div style="margin-top:8px; color:#9ca3af; font-size:0.85rem;">
-          No matching document found.
+          ${missingSubtext}
         </div>
         <div style="margin-top:12px; display:flex; gap:8px;">
           <button class="btn btn-success btn-sm btn-confirm-doc" data-doc="${docKey}">Mark Complete</button>
@@ -1493,13 +1541,22 @@ function openDrawer(participantId) {
     } else {
       completeCount++;
       card.style.cssText = "background:#1f2937; padding:14px; border-radius:6px; border-left:4px solid #10b981; margin-bottom:12px;";
+
+      // Determine source label for Complete cards
+      const completeSource = docData.verificationSource === 'manual'
+        ? `<span style="font-size:0.7rem; color:#94a3b8; font-weight:500;">· Manually verified</span>`
+        : `<span style="font-size:0.7rem; color:#94a3b8; font-weight:500;">· Drive verified</span>`;
+      const completeSubtext = docData.verificationSource === 'manual'
+        ? `Verified by ${escapeHtml(docData.reviewedBy || 'reviewer')}.`
+        : escapeHtml(fileName);
+
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-weight:700; color:#34d399; font-size:0.95rem;">✓ ${escapeHtml(docName)}</span>
-          <span style="font-size:0.75rem; background:#064e3b; color:#34d399; padding:2px 8px; border-radius:4px; font-weight:600;">Complete</span>
+          <span style="font-size:0.75rem; background:#064e3b; color:#34d399; padding:2px 8px; border-radius:4px; font-weight:600;">Complete ${completeSource}</span>
         </div>
         <div style="margin-top:8px; color:#e5e7eb; font-size:0.85rem;">
-          <strong style="color:#f8fafc;">${escapeHtml(fileName)}</strong>
+          <strong style="color:#f8fafc;">${completeSubtext}</strong>
         </div>
         <div style="margin-top:8px; display:flex; gap:8px;">
           <button class="btn btn-secondary btn-xs btn-change-status" data-doc="${docKey}">Reopen / Mark Missing</button>
@@ -1695,7 +1752,8 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "", tar
     reviewedAt: new Date().toISOString(),
     note: note,
     fileId: fileId,
-    targetMember: targetMember
+    targetMember: targetMember,
+    verificationSource: 'manual'
   };
 
   const overrideKey = targetMember ? `${docKey}_${targetMember}` : docKey;
@@ -1728,9 +1786,12 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "", tar
   saveLocalOverrides();
 
   // 2. Persist to Supabase
+  // IMPORTANT: conflict key is enterprise_folder_id,requirement_id (the actual DB unique constraint).
+  // Using the wrong key (enterprise_id,requirement_id) would create duplicate rows instead of updating.
+  const verifiedAt = new Date().toISOString();
   if (supabaseClient) {
     try {
-      await supabaseClient
+      const { error: upsertErr } = await supabaseClient
         .from('human_reviews')
         .upsert({
           enterprise_folder_id: primaryFolderId,
@@ -1739,10 +1800,18 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "", tar
           file_id: fileId,
           automated_status: doc.automatedStatus || doc.status,
           human_status: humanStatus,
+          verification_source: 'manual',
+          verified_at: verifiedAt,
           reviewer_name: reviewerName,
           reviewer_notes: targetMember ? `[Member: ${targetMember}] ${note}` : note,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'enterprise_id,requirement_id' });
+          updated_at: verifiedAt
+        }, { onConflict: 'enterprise_folder_id,requirement_id' });
+
+      if (upsertErr) {
+        console.error("[PERSISTENCE] human_reviews upsert error:", upsertErr);
+      } else {
+        console.log(`[PERSISTENCE] human_reviews saved: ${primaryFolderId}/${overrideKey} → ${humanStatus}`);
+      }
 
       await supabaseClient
         .from('human_review_history')
@@ -1755,7 +1824,7 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "", tar
           new_status: humanStatus,
           reviewer_name: reviewerName,
           reviewer_notes: targetMember ? `[Member: ${targetMember}] ${note}` : note,
-          created_at: new Date().toISOString()
+          created_at: verifiedAt
         });
     } catch (err) {
       console.error("[PERSISTENCE] Supabase execution error:", err);
