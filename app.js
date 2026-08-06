@@ -1359,12 +1359,14 @@ function openDrawer(participantId) {
     });
   }
 
-  document.getElementById("drawer-comp-rate-badge").textContent = `${p.completeCount} of ${p.applicableRequirementsCount} requirements complete`;
+  const elCompBadge = document.getElementById("drawer-comp-rate-badge");
+  if (elCompBadge) elCompBadge.textContent = `${p.completeCount} of ${p.applicableRequirementsCount} requirements complete`;
 
   const driveLink = document.getElementById("drawer-drive-url");
   driveLink.href = p.driveUrl || `https://drive.google.com/drive/folders/${primaryFolderId}`;
 
-  document.getElementById("drawer-subhead-counts").textContent = `${p.completeCount} Complete · ${p.checkCount} Need Verification · ${p.missingCount} Missing`;
+  const elSubhead = document.getElementById("drawer-subhead-counts");
+  if (elSubhead) elSubhead.textContent = `${p.completeCount} Complete · ${p.checkCount} Need Verification · ${p.missingCount} Missing`;
 
   const elCaseComp = document.getElementById("case-val-compliance");
   if (elCaseComp) elCaseComp.textContent = `${p.completeCount} / ${p.applicableRequirementsCount}`;
