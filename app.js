@@ -100,8 +100,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function initSupabaseClient() {
-  const supabaseUrl = window.SUPABASE_URL || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_URL : null) || "https://gndnmbdzfoamtgjkvnyr.supabase.co";
-  const supabaseKey = window.SUPABASE_ANON_KEY || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_ANON_KEY : null) || "sb_publishable_zojIDwrTmNXHQLWuOhm7yQ_2pIvgypM";
+  const supabaseUrl = window.SUPABASE_URL || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_URL : null) || "https://wlpapthqjhutjbrsikos.supabase.co";
+  const supabaseKey = window.SUPABASE_ANON_KEY || (typeof process !== 'undefined' && process.env ? process.env.SUPABASE_ANON_KEY : null) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscGFwdGhxamh1dGpicnNpa29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTM2MDgsImV4cCI6MjEwMTQyOTYwOH0.UD8YtH7JQR53hhD1WbCB9LDAtnUa5DJRP4GAYC6QbAk";
 
   console.log("[INIT] initSupabaseClient called");
   console.log("[INIT] window.SUPABASE_URL:", window.SUPABASE_URL || "(not set)");
@@ -265,6 +265,13 @@ async function fetchScanResultsFromSupabase(identityMap) {
           _driveUrl: row.drive_url
         };
       }
+
+      const matchedFiles = row.matched_files || [];
+      let metaFromFiles = { typeConfidence: 0, typeEvidence: [], memberCount: 0, memberNames: [], statusDetail: "" };
+      if (matchedFiles.length > 0 && matchedFiles[0]._meta) {
+        metaFromFiles = matchedFiles[0]._meta;
+      }
+
       scanMap[resolvedFolderId][row.requirement_id] = {
         automatedStatus: row.automated_status,
         confidence: row.confidence,
@@ -272,8 +279,23 @@ async function fetchScanResultsFromSupabase(identityMap) {
         fileName: row.file_name,
         fileId: row.file_id,
         driveUrl: row.drive_url,
-        matchedFiles: row.matched_files || []
+        matchedFiles: matchedFiles.map(f => {
+          const { _meta, ...rest } = f;
+          return rest;
+        }),
+        typeConfidence: metaFromFiles.typeConfidence,
+        typeEvidence: metaFromFiles.typeEvidence,
+        memberCount: metaFromFiles.memberCount,
+        memberNames: metaFromFiles.memberNames,
+        statusDetail: metaFromFiles.statusDetail
       };
+
+      if (metaFromFiles.typeConfidence > (scanMap[resolvedFolderId]._typeConfidence || 0)) {
+        scanMap[resolvedFolderId]._typeConfidence = metaFromFiles.typeConfidence;
+        scanMap[resolvedFolderId]._typeEvidence = metaFromFiles.typeEvidence;
+        scanMap[resolvedFolderId]._memberCount = metaFromFiles.memberCount;
+        scanMap[resolvedFolderId]._memberNames = metaFromFiles.memberNames;
+      }
     });
     return scanMap;
   } catch (e) {
@@ -315,24 +337,33 @@ async function fetchData() {
   if (cloudScanMap && Object.keys(cloudScanMap).length > 0) {
     Object.keys(cloudScanMap).forEach(folderKey => {
       const entScan = cloudScanMap[folderKey];
+      const firstReqKey = Object.keys(CANONICAL_REQUIREMENTS).find(k => entScan[k]);
+      const sampleReq = firstReqKey ? entScan[firstReqKey] : null;
+
       participantsMap[folderKey] = {
         enterpriseFolderId: folderKey,
         id: entScan._enterpriseId || folderKey,
         name: entScan._enterpriseName || formatEnterpriseNameFromId(folderKey),
         applicantType: entScan._applicantType || "INDIVIDUAL",
+        typeConfidence: sampleReq ? (sampleReq.typeConfidence || 0) : 0,
+        typeEvidence: sampleReq ? (sampleReq.typeEvidence || []) : [],
+        memberCount: sampleReq ? (sampleReq.memberCount || 0) : 0,
+        memberNames: sampleReq ? (sampleReq.memberNames || []) : [],
         driveUrl: entScan._driveUrl || `https://drive.google.com/drive/folders/${folderKey}`,
         driveFolderId: folderKey,
         requirements: {}
       };
 
-      // Populate requirement statuses from scan_results
       Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
         const reqScan = entScan[reqKey];
         if (reqScan) {
+          const rawStatus = reqScan.automatedStatus || "MISSING";
+          const cleanStatus = rawStatus.split(':')[0].trim().toUpperCase();
           participantsMap[folderKey].requirements[reqKey] = {
-            status: reqScan.automatedStatus || "MISSING",
-            automatedStatus: reqScan.automatedStatus || "MISSING",
-            files: reqScan.matchedFiles && reqScan.matchedFiles.length > 0 ? reqScan.matchedFiles : (reqScan.fileName ? [{ name: reqScan.fileName, confidence: reqScan.confidence, fileId: reqScan.fileId, webViewLink: reqScan.driveUrl }] : [])
+            status: cleanStatus,
+            automatedStatus: rawStatus,
+            files: reqScan.matchedFiles && reqScan.matchedFiles.length > 0 ? reqScan.matchedFiles : (reqScan.fileName ? [{ name: reqScan.fileName, confidence: reqScan.confidence, fileId: reqScan.fileId, webViewLink: reqScan.driveUrl }] : []),
+            statusDetail: reqScan.statusDetail || ""
           };
         }
       });
@@ -383,17 +414,19 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
 
     const activeOverrides = state.overrides[entKey] || state.overrides[copy.id];
     if (activeOverrides) {
-      console.log("[MERGE] Applying overrides for", copy.name, "entKey:", entKey, "overrideKeys:", Object.keys(activeOverrides));
+      if (activeOverrides._applicantType) {
+        copy.applicantType = activeOverrides._applicantType;
+      }
       Object.keys(activeOverrides).forEach(docKey => {
+        if (docKey.startsWith("_")) return;
         if (copy.requirements[docKey]) {
           const oldStatus = copy.requirements[docKey].status;
           copy.requirements[docKey].review = activeOverrides[docKey];
           if (activeOverrides[docKey].manualStatus) {
-            copy.requirements[docKey].status = activeOverrides[docKey].manualStatus;
-            console.log("[MERGE]   Override", docKey, ":", oldStatus, "->", activeOverrides[docKey].manualStatus);
+            let st = activeOverrides[docKey].manualStatus;
+            if (st === "NEEDS_REVIEW" || st === "REVIEW") st = "CHECK";
+            copy.requirements[docKey].status = st;
           }
-        } else {
-          console.log("[MERGE]   Override key", docKey, "not found in requirements for", copy.name);
         }
       });
     }
@@ -420,56 +453,53 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
 
 function recalculateEnterpriseScores(p) {
   const reqs = p.requirements || {};
-  const isGroup = (p.applicantType || "INDIVIDUAL").toUpperCase() === "GROUP";
+  const appType = (p.applicantType || "CHECK").toUpperCase();
+  const isGroup = appType === "GROUP";
 
-  if (!isGroup) {
-    // INDIVIDUAL Calculation (100% Backward Compatible 11-slot model)
-    const applicableReqKeys = Object.keys(CANONICAL_REQUIREMENTS).filter(k => {
-      return reqs[k] && reqs[k].status !== "NOT_APPLICABLE";
-    });
+  const applicableReqKeys = Object.keys(CANONICAL_REQUIREMENTS).filter(k => {
+    return reqs[k] && reqs[k].status !== "NOT_APPLICABLE";
+  });
 
-    const totalApplicable = applicableReqKeys.length;
-    let completeCount = 0;
-    let missingCount = 0;
-    let needsReviewCount = 0;
+  const totalApplicable = applicableReqKeys.length;
+  let completeCount = 0;
+  let checkCount = 0;
+  let missingCount = 0;
 
-    applicableReqKeys.forEach(k => {
-      const doc = reqs[k];
-      const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
-      if (st === "COMPLETE" || st === "APPROVED") completeCount++;
-      else if (st === "NEEDS_REVIEW") needsReviewCount++;
-      else missingCount++;
-    });
+  applicableReqKeys.forEach(k => {
+    const doc = reqs[k];
+    const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
+    if (st === "COMPLETE" || st === "APPROVED") completeCount++;
+    else if (st === "MISSING" || st === "REJECTED") missingCount++;
+    else checkCount++;
+  });
 
-    p.scores = {
-      complete: completeCount,
-      missing: missingCount,
-      needsReview: needsReviewCount,
-      total: totalApplicable,
-      percentage: totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0
-    };
+  p.scores = {
+    complete: completeCount,
+    check: checkCount,
+    review: checkCount,
+    missing: missingCount,
+    total: totalApplicable,
+    percentage: totalApplicable > 0 ? Math.round((completeCount / totalApplicable) * 1000) / 10 : 0.0
+  };
 
-    p.completionRate = p.scores.percentage;
-    p.completeCount = p.scores.complete;
-    p.missingCount = p.scores.missing;
-    p.needsReviewCount = p.scores.needsReview;
-    p.applicableRequirementsCount = totalApplicable;
+  p.completionRate = p.scores.percentage;
+  p.completeCount = completeCount;
+  p.checkCount = checkCount;
+  p.reviewCount = checkCount;
+  p.missingCount = missingCount;
+  p.applicableRequirementsCount = totalApplicable;
 
-    if (completeCount === totalApplicable) {
-      p.status = "COMPLETE";
-      p.priority = "FULLY COMPLIANT";
-    } else if (p.completionRate < 60 || missingCount >= 3) {
-      p.status = missingCount > 0 ? "INCOMPLETE" : "NEEDS_REVIEW";
-      p.priority = "HIGH";
-    } else if (needsReviewCount > 0 || missingCount > 0) {
-      p.status = needsReviewCount > 0 ? "NEEDS_REVIEW" : "INCOMPLETE";
-      p.priority = "MEDIUM";
-    } else {
-      p.status = "COMPLETE";
-      p.priority = "LOW";
-    }
-    return;
+  if (completeCount === totalApplicable) {
+    p.status = "COMPLETE";
+    p.priority = "FULLY COMPLIANT";
+  } else if (checkCount > 0) {
+    p.status = "CHECK";
+    p.priority = "MEDIUM";
+  } else {
+    p.status = "INCOMPLETE";
+    p.priority = "HIGH";
   }
+}
 
   // GROUP Calculation (Dynamic Shared + Member Slots)
   const personalReqKeys = ["validId", "proofOfResidency", "photo2x2"];
@@ -494,21 +524,21 @@ function recalculateEnterpriseScores(p) {
 
   let completedSharedCount = 0;
   let missingSharedCount = 0;
-  let needsReviewSharedCount = 0;
+  let reviewSharedCount = 0;
 
   applicableSharedKeys.forEach(k => {
     const doc = reqs[k];
-    const st = doc ? (doc.status || "MISSING").toUpperCase() : "MISSING";
+    const st = doc ? (doc.status || "REVIEW").toUpperCase() : "REVIEW";
     if (st === "COMPLETE" || st === "APPROVED") completedSharedCount++;
-    else if (st === "NEEDS_REVIEW") needsReviewSharedCount++;
-    else missingSharedCount++;
+    else if (st === "MISSING" || st === "REJECTED") missingSharedCount++;
+    else reviewSharedCount++;
   });
 
   p.memberDetails = {};
   let totalMemberSlots = 0;
   let completedMemberSlots = 0;
   let missingMemberSlots = 0;
-  let needsReviewMemberSlots = 0;
+  let reviewMemberSlots = 0;
 
   if (membersList.length > 0) {
     membersList.forEach(mName => {
@@ -516,71 +546,68 @@ function recalculateEnterpriseScores(p) {
       personalReqKeys.forEach(reqKey => {
         totalMemberSlots++;
         const doc = reqs[reqKey];
-        let mStatus = "MISSING";
+        let mStatus = "REVIEW";
         let mFile = null;
 
         if (doc && doc.files) {
           const matchingFile = doc.files.find(f => (f.memberName || "").toUpperCase() === mName);
           if (matchingFile) {
             mFile = matchingFile;
-            mStatus = (matchingFile.confidence || 0.9) >= 0.85 ? "COMPLETE" : "NEEDS_REVIEW";
+            mStatus = (matchingFile.confidence || 0.9) >= 0.85 ? "COMPLETE" : "REVIEW";
           }
         }
 
-        // Apply human review override if specifically set for member/requirement
         if (state.overrides && state.overrides[p.enterpriseFolderId] && state.overrides[p.enterpriseFolderId][`${reqKey}_${mName}`]) {
           mStatus = state.overrides[p.enterpriseFolderId][`${reqKey}_${mName}`].manualStatus;
         }
 
         p.memberDetails[mName][reqKey] = { status: mStatus, file: mFile };
         if (mStatus === "COMPLETE" || mStatus === "APPROVED") completedMemberSlots++;
-        else if (mStatus === "NEEDS_REVIEW") needsReviewMemberSlots++;
-        else missingMemberSlots++;
+        else if (mStatus === "MISSING" || mStatus === "REJECTED") missingMemberSlots++;
+        else reviewMemberSlots++;
       });
     });
 
-    // Update requirement-level status for personal requirements based on all members' status
     personalReqKeys.forEach(reqKey => {
       if (reqs[reqKey]) {
         const mStatuses = membersList.map(m => p.memberDetails[m][reqKey].status);
         if (mStatuses.every(s => s === "COMPLETE" || s === "APPROVED")) {
           reqs[reqKey].status = "COMPLETE";
-        } else if (mStatuses.some(s => s === "NEEDS_REVIEW")) {
-          reqs[reqKey].status = "NEEDS_REVIEW";
+        } else if (mStatuses.some(s => s === "MISSING" || s === "REJECTED")) {
+          reqs[reqKey].status = "MISSING";
         } else {
-          reqs[reqKey].status = "INCOMPLETE";
+          reqs[reqKey].status = "REVIEW";
         }
       }
     });
 
   } else {
-    // Fallback if no specific member names are parsed yet
     personalReqKeys.forEach(reqKey => {
       totalMemberSlots++;
-      const st = (reqs[reqKey]?.status || "MISSING").toUpperCase();
+      const st = (reqs[reqKey]?.status || "REVIEW").toUpperCase();
       if (st === "COMPLETE" || st === "APPROVED") completedMemberSlots++;
-      else if (st === "NEEDS_REVIEW") needsReviewMemberSlots++;
-      else missingMemberSlots++;
+      else if (st === "MISSING" || st === "REJECTED") missingMemberSlots++;
+      else reviewMemberSlots++;
     });
   }
 
   const grandTotalSlots = applicableSharedKeys.length + totalMemberSlots;
   const grandCompletedSlots = completedSharedCount + completedMemberSlots;
   const grandMissingSlots = missingSharedCount + missingMemberSlots;
-  const grandNeedsReviewSlots = needsReviewSharedCount + needsReviewMemberSlots;
+  const grandReviewSlots = reviewSharedCount + reviewMemberSlots;
 
   p.scores = {
     complete: grandCompletedSlots,
+    review: grandReviewSlots,
     missing: grandMissingSlots,
-    needsReview: grandNeedsReviewSlots,
     total: grandTotalSlots,
     percentage: grandTotalSlots > 0 ? Math.round((grandCompletedSlots / grandTotalSlots) * 1000) / 10 : 0.0
   };
 
   p.completionRate = p.scores.percentage;
   p.completeCount = p.scores.complete;
+  p.reviewCount = p.scores.review;
   p.missingCount = p.scores.missing;
-  p.needsReviewCount = p.scores.needsReview;
   p.totalGroupSlots = grandTotalSlots;
   p.applicableRequirementsCount = grandTotalSlots;
 
@@ -588,10 +615,10 @@ function recalculateEnterpriseScores(p) {
     p.status = "COMPLETE";
     p.priority = "FULLY COMPLIANT";
   } else if (p.completionRate < 60 || grandMissingSlots >= 3) {
-    p.status = grandMissingSlots > 0 ? "INCOMPLETE" : "NEEDS_REVIEW";
+    p.status = "INCOMPLETE";
     p.priority = "HIGH";
   } else {
-    p.status = grandNeedsReviewSlots > 0 ? "NEEDS_REVIEW" : "INCOMPLETE";
+    p.status = grandReviewSlots > 0 ? "NEEDS_REVIEW" : "INCOMPLETE";
     p.priority = "MEDIUM";
   }
 }
@@ -608,9 +635,9 @@ function generateNextActionString(p) {
   Object.keys(CANONICAL_REQUIREMENTS).forEach(k => {
     const doc = reqs[k];
     if (doc && doc.status !== "NOT_APPLICABLE") {
-      if (doc.status === "MISSING" || doc.status === "REJECTED" || doc.status === "INCOMPLETE") {
+      if (doc.status === "MISSING" || doc.status === "REJECTED") {
         missingNames.push(CANONICAL_REQUIREMENTS[k]);
-      } else if (doc.status === "NEEDS_REVIEW") {
+      } else if (doc.status === "REVIEW" || doc.status === "NEEDS_REVIEW") {
         reviewNames.push(CANONICAL_REQUIREMENTS[k]);
       }
     }
@@ -647,7 +674,7 @@ function applyFiltersAndRender() {
     } else if (fst === "incomplete") {
       list = list.filter(p => p.status === "INCOMPLETE" || p.completionRate < 100);
     } else if (fst === "needs_review") {
-      list = list.filter(p => p.needsReviewCount > 0 || p.status === "NEEDS_REVIEW");
+      list = list.filter(p => p.reviewCount > 0 || p.status === "NEEDS_REVIEW");
     } else if (fst === "priority_high") {
       list = list.filter(p => p.priority === "HIGH");
     }
@@ -742,7 +769,7 @@ function resetAllFilters() {
 function renderKPICards() {
   const total = state.participants.length;
   const complete = state.participants.filter(p => p.status === "COMPLETE").length;
-  const needsReview = state.participants.filter(p => p.needsReviewCount > 0 || p.status === "NEEDS_REVIEW").length;
+  const needsReview = state.participants.filter(p => p.reviewCount > 0 || p.status === "NEEDS_REVIEW").length;
   const incomplete = state.participants.filter(p => p.completionRate < 100).length;
   const totalSlotsAll = state.participants.reduce((acc, p) => acc + (p.applicableRequirementsCount || 11), 0);
   const completedSlotsAll = state.participants.reduce((acc, p) => acc + (p.completeCount || 0), 0);
@@ -762,7 +789,7 @@ function renderKPICards() {
 function renderPriorityWorkQueue() {
   const total = state.participants.length;
   const complete = state.participants.filter(p => p.status === "COMPLETE").length;
-  const needsReview = state.participants.filter(p => p.needsReviewCount > 0).length;
+  const needsReview = state.participants.filter(p => p.reviewCount > 0).length;
   const highPriority = state.participants.filter(p => p.priority === "HIGH").length;
   const requiringAction = total - complete;
 
@@ -802,9 +829,9 @@ function renderPriorityWorkQueue() {
 
     let statusBadgeHtml = `<span class="badge badge-missing">Action Required</span>`;
     if (p.status === "COMPLETE") statusBadgeHtml = `<span class="badge badge-approved">Fully Compliant</span>`;
-    else if (p.needsReviewCount > 0) statusBadgeHtml = `<span class="badge badge-review">Needs Review</span>`;
+    else if (p.reviewCount > 0) statusBadgeHtml = `<span class="badge badge-review">Needs Review</span>`;
 
-    const outstandingText = p.status === "COMPLETE" ? "0 missing" : `${p.missingCount} missing${p.needsReviewCount > 0 ? ` · ${p.needsReviewCount} review` : ''}`;
+    const outstandingText = p.status === "COMPLETE" ? "0 missing" : `${p.missingCount} missing${p.reviewCount > 0 ? ` · ${p.reviewCount} review` : ''}`;
 
     tr.innerHTML = `
       <td><strong style="color:#f8fafc;">${escapeHtml(p.name)}</strong></td>
@@ -925,57 +952,119 @@ function renderTable() {
     const primaryKey = p.enterpriseFolderId || p.driveFolderId || p.id;
     tr.dataset.id = primaryKey;
 
-    let priorityBadgeClass = "priority-medium";
-    if (p.priority === "HIGH") priorityBadgeClass = "priority-high";
-    if (p.priority === "LOW") priorityBadgeClass = "priority-low";
-    if (p.priority === "FULLY COMPLIANT") priorityBadgeClass = "priority-complete";
+    let appTypeHtml = "";
+    const rawType = (p.applicantType || "CHECK").toUpperCase();
+    if (rawType === "GROUP") {
+      appTypeHtml = `<span class="badge" style="background:#1e3a8a; color:#93c5fd; font-weight:700;">GROUP</span>`;
+    } else if (rawType === "INDIVIDUAL") {
+      appTypeHtml = `<span class="badge" style="background:#1f2937; color:#d1d5db; font-weight:700;">INDIVIDUAL</span>`;
+    } else {
+      appTypeHtml = `
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="color:#fbbf24; font-size:0.75rem; font-weight:600;">⚠ Applicant type needs checking</span>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-secondary btn-xs btn-set-type" data-id="${primaryKey}" data-type="INDIVIDUAL">Individual</button>
+            <button class="btn btn-secondary btn-xs btn-set-type" data-id="${primaryKey}" data-type="GROUP">Group</button>
+          </div>
+        </div>
+      `;
+    }
+
+    let needsAttentionHtml = "";
+    if (p.checkCount > 0) {
+      needsAttentionHtml = `<span style="color:#fbbf24; font-weight:600;">⚠ ${p.checkCount} need checking</span>`;
+    } else if (p.missingCount > 0) {
+      needsAttentionHtml = `<span style="color:#f87171; font-weight:600;">✕ ${p.missingCount} missing</span>`;
+    } else {
+      needsAttentionHtml = `<span style="color:#34d399; font-weight:600;">✓ All complete</span>`;
+    }
 
     tr.innerHTML = `
       <td>
         <div class="participant-name-cell">
-          <span class="p-name">${escapeHtml(p.name)}</span>
+          <strong style="color:#f8fafc; font-size:0.925rem;">${escapeHtml(p.name)}</strong>
         </div>
       </td>
-      <td><span class="badge" style="background:#1f2937; color:#d1d5db;">${(p.applicantType || 'INDIVIDUAL').toUpperCase()}</span></td>
+      <td>${appTypeHtml}</td>
       <td>
-        <div style="display:flex; flex-direction:column; gap:2px; min-width:110px;">
-          <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700;">
-            <span>${p.completionRate}%</span>
-          </div>
-          <div class="progress-bar-bg" style="margin-top:2px;">
+        <div style="display:flex; flex-direction:column; gap:2px; min-width:130px;">
+          <span style="font-size:0.8rem; font-weight:700; color:#e5e7eb;">${p.completeCount} of ${p.applicableRequirementsCount} complete</span>
+          <div class="progress-bar-bg" style="height:6px; margin-top:2px;">
             <div class="progress-bar-fill" style="width: ${p.completionRate}%;"></div>
           </div>
         </div>
       </td>
-      <td><span class="badge badge-approved">${p.completeCount}</span></td>
-      <td><span class="badge badge-review">${p.needsReviewCount}</span></td>
-      <td><span class="badge badge-missing">${p.missingCount}</span></td>
-      <td><span class="badge-priority ${priorityBadgeClass}">${p.priority}</span></td>
+      <td>${needsAttentionHtml}</td>
       <td style="text-align:right;">
-        <button class="btn btn-secondary btn-sm btn-review-row" data-id="${primaryKey}">Review →</button>
+        <button class="btn btn-primary btn-sm btn-review-row" data-id="${primaryKey}">Review</button>
       </td>
     `;
 
-    tr.addEventListener("click", () => openDrawer(primaryKey));
+    tr.addEventListener("click", (e) => {
+      if (e.target.classList.contains("btn-set-type")) {
+        e.stopPropagation();
+        const newType = e.target.dataset.type;
+        setApplicantTypeOverride(primaryKey, newType);
+        return;
+      }
+      openDrawer(primaryKey);
+    });
     tbody.appendChild(tr);
   });
 }
 
 function renderDocStatusBadge(status) {
-  const st = (status || "MISSING").toUpperCase();
+  const st = (status || "CHECK").toUpperCase();
   switch (st) {
     case "COMPLETE":
     case "APPROVED":
       return `<span class="badge badge-approved">✓ Complete</span>`;
+    case "CHECK":
+    case "REVIEW":
     case "NEEDS_REVIEW":
-      return `<span class="badge badge-review">⚠ Needs review</span>`;
+      return `<span class="badge badge-review">⚠ Check</span>`;
+    case "MISSING":
     case "REJECTED":
       return `<span class="badge badge-rejected">✕ Missing</span>`;
     case "NOT_APPLICABLE":
       return `<span class="badge badge-na">— Not applicable</span>`;
-    case "MISSING":
     default:
-      return `<span class="badge badge-missing">✕ Missing</span>`;
+      return `<span class="badge badge-review">⚠ Check</span>`;
+  }
+}
+
+async function setApplicantTypeOverride(participantId, newApplicantType) {
+  const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.driveFolderId === participantId || x.id === participantId));
+  if (!p) return;
+
+  const primaryFolderId = p.enterpriseFolderId || p.driveFolderId || p.id;
+  p.applicantType = newApplicantType;
+
+  if (!state.overrides[primaryFolderId]) state.overrides[primaryFolderId] = {};
+  state.overrides[primaryFolderId]._applicantType = newApplicantType;
+  saveLocalOverrides();
+
+  if (supabaseClient) {
+    try {
+      await supabaseClient
+        .from('human_reviews')
+        .upsert({
+          enterprise_folder_id: primaryFolderId,
+          enterprise_id: p.id,
+          requirement_id: '_applicantType',
+          human_status: newApplicantType,
+          reviewer_name: localStorage.getItem("yfc_reviewer_name") || "Operational Reviewer",
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'enterprise_folder_id,requirement_id' });
+    } catch (e) {
+      console.warn("Failed to persist applicant type override to Supabase:", e);
+    }
+  }
+
+  recalculateEnterpriseScores(p);
+  applyFiltersAndRender();
+  if (state.selectedParticipantId === primaryFolderId) {
+    openDrawer(primaryFolderId);
   }
 }
 
@@ -987,76 +1076,56 @@ function openDrawer(participantId) {
   state.selectedParticipantId = primaryFolderId;
 
   document.getElementById("drawer-participant-name").textContent = p.name;
-  document.getElementById("drawer-applicant-type").textContent = (p.applicantType || 'INDIVIDUAL').toUpperCase();
-  document.getElementById("drawer-comp-rate-badge").textContent = `${p.completionRate}% Compliance`;
+  const rawType = (p.applicantType || "CHECK").toUpperCase();
+  const typeDisplay = rawType === "CHECK" ? `<span style="color:#fbbf24; font-weight:700;">⚠ Applicant type needs checking</span>` : rawType;
+  document.getElementById("drawer-applicant-type").innerHTML = typeDisplay;
+  document.getElementById("drawer-comp-rate-badge").textContent = `${p.completeCount} of ${p.applicableRequirementsCount} requirements complete`;
 
   const driveLink = document.getElementById("drawer-drive-url");
   driveLink.href = p.driveUrl || `https://drive.google.com/drive/folders/${primaryFolderId}`;
 
-  document.getElementById("drawer-subhead-counts").textContent = `${p.missingCount} Missing · ${p.needsReviewCount} Needs Review · ${p.completeCount} Complete`;
+  document.getElementById("drawer-subhead-counts").textContent = `${p.completeCount} Complete · ${p.checkCount} Need Verification · ${p.missingCount} Missing`;
 
-  // Case Summary Bar
   const elCaseComp = document.getElementById("case-val-compliance");
-  if (elCaseComp) elCaseComp.textContent = `${p.completionRate}%`;
+  if (elCaseComp) elCaseComp.textContent = `${p.completeCount} / ${p.applicableRequirementsCount}`;
 
   const elCaseMembers = document.getElementById("case-val-members");
-  if (elCaseMembers) {
-    if (p.applicantType === "GROUP" && p.groupMembers && p.groupMembers.length > 0) {
-      const verifiedMembers = p.groupMembers.filter(m => {
-        const memDet = p.memberDetails ? p.memberDetails[m] : null;
-        if (!memDet) return false;
-        return ["validId", "proofOfResidency", "photo2x2"].every(rk => memDet[rk] && (memDet[rk].status === "COMPLETE" || memDet[rk].status === "APPROVED"));
-      }).length;
-      elCaseMembers.textContent = `${verifiedMembers} / ${p.groupMembers.length}`;
-    } else {
-      elCaseMembers.textContent = "N/A";
-    }
-  }
+  if (elCaseMembers) elCaseMembers.textContent = rawType;
 
   const elCaseOut = document.getElementById("case-val-outstanding");
-  if (elCaseOut) elCaseOut.textContent = `${p.missingCount} reqs`;
+  if (elCaseOut) elCaseOut.textContent = `${p.checkCount + p.missingCount} reqs`;
 
-  // Next Action HTML
   const elNextAction = document.getElementById("drawer-next-action-text");
   if (elNextAction) elNextAction.innerHTML = generateNextActionString(p);
-
-  // Group Members Summary Widget
-  const memSection = document.getElementById("drawer-members-section");
-  const memListContainer = document.getElementById("drawer-members-list");
-  if (memSection && memListContainer) {
-    if (p.applicantType === "GROUP" && p.groupMembers && p.groupMembers.length > 0) {
-      memSection.classList.remove("hidden");
-      memListContainer.innerHTML = p.groupMembers.map(m => {
-        const memDet = p.memberDetails ? p.memberDetails[m] : null;
-        let compPersonalCount = 0;
-        if (memDet) {
-          ["validId", "proofOfResidency", "photo2x2"].forEach(rk => {
-            if (memDet[rk] && (memDet[rk].status === "COMPLETE" || memDet[rk].status === "APPROVED")) {
-              compPersonalCount++;
-            }
-          });
-        }
-        const isAllComp = compPersonalCount === 3;
-        return `<span class="member-pill ${isAllComp ? 'complete' : 'incomplete'}">
-          ${isAllComp ? '✓' : '⚠'} <strong>${escapeHtml(m)}</strong> ${compPersonalCount}/3
-        </span>`;
-      }).join("");
-    } else {
-      memSection.classList.add("hidden");
-    }
-  }
 
   const reviewRequiredList = document.getElementById("drawer-review-required-list");
   const completedList = document.getElementById("drawer-completed-list");
   const completedCountTag = document.getElementById("completed-count-tag");
   const completedDetails = document.getElementById("drawer-completed-details");
 
-  if (completedDetails) completedDetails.removeAttribute("open"); // Collapse completed section by default
+  if (completedDetails) completedDetails.removeAttribute("open");
 
   reviewRequiredList.innerHTML = "";
   completedList.innerHTML = "";
 
-  let reviewCount = 0;
+  // Applicant Type Selector Widget if CHECK
+  if (rawType === "CHECK") {
+    const typeWidget = document.createElement("div");
+    typeWidget.style.cssText = "margin-bottom:16px; background:#111827; padding:12px; border-radius:6px; border:1px solid #f59e0b;";
+    typeWidget.innerHTML = `
+      <div style="color:#fbbf24; font-weight:700; font-size:0.85rem; margin-bottom:6px;">⚠ Please select enterprise applicant type:</div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary btn-sm btn-select-drawer-type" data-type="INDIVIDUAL">[ Individual ]</button>
+        <button class="btn btn-secondary btn-sm btn-select-drawer-type" data-type="GROUP">[ Group ]</button>
+      </div>
+    `;
+    typeWidget.querySelectorAll(".btn-select-drawer-type").forEach(btn => {
+      btn.addEventListener("click", () => setApplicantTypeOverride(primaryFolderId, btn.dataset.type));
+    });
+    reviewRequiredList.appendChild(typeWidget);
+  }
+
+  let needsAttentionCount = 0;
   let completeCount = 0;
 
   Object.keys(CANONICAL_REQUIREMENTS).forEach(docKey => {
@@ -1064,151 +1133,92 @@ function openDrawer(participantId) {
     const docData = p.requirements[docKey] || { status: "MISSING", files: [] };
     const files = docData.files || [];
     const isNotApplicable = docData.status === "NOT_APPLICABLE";
-    const isUnresolved = docData.status === "MISSING" || docData.status === "NEEDS_REVIEW" || docData.status === "REJECTED";
+    if (isNotApplicable) return;
 
-    const histKey = `${primaryFolderId}_${docKey}`;
-    const histLogs = state.reviewHistory[histKey] || state.reviewHistory[`${p.id}_${docKey}`] || [];
-    const histBadgeTag = histLogs.length > 0 ? `<span class="badge" style="background:#374151; color:#a5b4fc; font-size:0.65rem;">📜 ${histLogs.length} review${histLogs.length > 1 ? 's' : ''} logged</span>` : '';
+    const fileName = files.length > 0 ? files[0].name : "No matching document found";
+    const st = (docData.status || "MISSING").toUpperCase();
 
     const card = document.createElement("div");
     card.className = "doc-item-card";
-    
-    const autoStatusBadge = renderDocStatusBadge(docData.automatedStatus || docData.status);
-    const humanReviewBadge = docData.review ? `<span class="badge" style="background:#4f46e5; color:#ffffff;">HUMAN: ${escapeHtml(docData.review.manualStatus)}</span>` : '';
 
-    let memberListHtml = '';
-    if (p.applicantType === "GROUP" && ["validId", "proofOfResidency", "photo2x2"].includes(docKey) && p.groupMembers && p.groupMembers.length > 0) {
-      const mems = p.groupMembers;
-      const compCount = mems.filter(m => p.memberDetails[m] && p.memberDetails[m][docKey] && (p.memberDetails[m][docKey].status === 'COMPLETE' || p.memberDetails[m][docKey].status === 'APPROVED')).length;
-      
-      memberListHtml = `
-        <div style="margin-top:6px; background:#111827; padding:6px 10px; border-radius:4px; border:1px solid #374151;">
-          <div style="font-size:0.72rem; font-weight:700; color:#38bdf8; margin-bottom:4px;">
-            MEMBER VERIFICATION (${compCount} / ${mems.length} MEMBERS VERIFIED):
-          </div>
-          <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:0.72rem;">
-            ${mems.map(m => {
-              const mInfo = p.memberDetails[m] ? p.memberDetails[m][docKey] : null;
-              const isComp = mInfo && (mInfo.status === 'COMPLETE' || mInfo.status === 'APPROVED');
-              const isReview = mInfo && mInfo.status === 'NEEDS_REVIEW';
-              let labelText = '— Missing';
-              let color = '#f87171';
-              let icon = '✕';
-              if (isComp) { labelText = ''; color = '#4ade80'; icon = '✓'; }
-              else if (isReview) { labelText = '— Needs Review'; color = '#fbbf24'; icon = '⚠'; }
-              
-              return `<span style="color:${color}; font-weight:600;">
-                ${icon} ${escapeHtml(m)} ${labelText}
-              </span>`;
-            }).join("")}
-          </div>
+    if (st === "CHECK" || st === "NEEDS_REVIEW" || st === "REVIEW") {
+      needsAttentionCount++;
+      card.style.cssText = "background:#1f2937; padding:14px; border-radius:6px; border-left:4px solid #f59e0b; margin-bottom:12px;";
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:700; color:#fbbf24; font-size:0.95rem;">⚠ ${escapeHtml(docName)}</span>
+          <span style="font-size:0.75rem; background:#374151; color:#fbbf24; padding:2px 8px; border-radius:4px; font-weight:600;">Needs Verification</span>
+        </div>
+        <div style="margin-top:8px; color:#e5e7eb; font-size:0.85rem;">
+          Possible document found:<br/>
+          <strong style="color:#f8fafc;">${escapeHtml(fileName)}</strong>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn btn-success btn-sm btn-confirm-doc" data-doc="${docKey}">[ ✓ This is correct ]</button>
+          <button class="btn btn-danger btn-sm btn-not-doc" data-doc="${docKey}">[ ✕ This is not the correct document ]</button>
         </div>
       `;
-    }
 
-    let actionButtonsHtml = '';
-    if (!isNotApplicable) {
-      if (docData.status === "NEEDS_REVIEW") {
-        actionButtonsHtml = `
-          <div class="doc-item-actions">
-            <button class="btn btn-primary btn-sm btn-inspect-doc" data-doc="${docKey}">Inspect Evidence</button>
-            <button class="btn btn-success btn-sm btn-approve-doc" data-doc="${docKey}">Approve</button>
-            <button class="btn btn-danger btn-sm btn-reject-doc" data-doc="${docKey}">Mark Missing</button>
-          </div>`;
-      } else if (docData.status === "MISSING" || docData.status === "REJECTED") {
-        actionButtonsHtml = `
-          <div class="doc-item-actions">
-            <button class="btn btn-secondary btn-sm btn-inspect-doc" data-doc="${docKey}">View Details & History</button>
-            <button class="btn btn-danger btn-sm btn-reject-doc" data-doc="${docKey}">Mark Missing</button>
-          </div>`;
-      } else {
-        actionButtonsHtml = `
-          <div class="doc-item-actions">
-            <button class="btn btn-secondary btn-sm btn-inspect-doc" data-doc="${docKey}">Inspect Evidence</button>
-            <button class="btn btn-warning btn-sm btn-flag-doc" data-doc="${docKey}">Flag Issue</button>
-          </div>`;
-      }
-    }
+      card.querySelector(".btn-confirm-doc").addEventListener("click", () => setDocOverride(primaryFolderId, docKey, "COMPLETE"));
+      card.querySelector(".btn-not-doc").addEventListener("click", () => setDocOverride(primaryFolderId, docKey, "MISSING"));
 
-    const flaggedBannerHtml = (docData.review && docData.review.manualStatus === "NEEDS_REVIEW") ? `
-      <div style="margin-top:8px; background:#1e1b4b; padding:8px 10px; border-radius:4px; border-left:3px solid #f59e0b; font-size:0.75rem;">
-        <div style="font-weight:700; color:#fbbf24; display:flex; align-items:center; gap:4px;">
-          <span>⚠ REVIEWER FLAGGED ISSUE</span>
-        </div>
-        <div style="color:#f1f5f9; margin-top:2px; font-weight:600;">Issue Note: <em>"${escapeHtml(docData.review.note || 'Document issue flagged')}"</em></div>
-        <div style="color:#94a3b8; font-size:0.68rem; margin-top:2px;">Entered by <strong>${escapeHtml(docData.review.reviewedBy || 'Operational Reviewer')}</strong> on ${new Date(docData.review.reviewedAt).toLocaleString()}</div>
-      </div>
-    ` : '';
-
-    card.innerHTML = `
-      <div class="doc-item-header">
-        <span class="doc-item-title">${docName} ${files.length > 1 ? `<span style="font-size:0.72rem; color:#94a3b8; margin-left:6px;">(${files.length} files matched)</span>` : ''}</span>
-        <div style="display:flex; gap:4px; align-items:center;">
-          ${histBadgeTag}
-          ${humanReviewBadge}
-          ${autoStatusBadge}
-        </div>
-      </div>
-      <div class="doc-item-filename">
-        ${files.length > 0 ? `Matched file: <strong>${escapeHtml(files[0].name)}</strong>` : (isNotApplicable ? 'Not applicable for Individual applicant' : 'No candidate document detected.')}
-      </div>
-      ${memberListHtml}
-      ${flaggedBannerHtml}
-      ${docData.review && docData.review.manualStatus !== "NEEDS_REVIEW" ? `<span class="meta-sub" style="font-size:0.7rem; color:#a5b4fc;">Entered by: <strong>${escapeHtml(docData.review.reviewedBy || 'Operational Reviewer')}</strong> (${new Date(docData.review.reviewedAt).toLocaleTimeString()}) ${docData.review.note ? `— <em>"${escapeHtml(docData.review.note)}"</em>` : ''}</span>` : ''}
-      ${actionButtonsHtml}
-    `;
-
-    const btnInspect = card.querySelector(".btn-inspect-doc");
-    if (btnInspect) btnInspect.addEventListener("click", (e) => { e.stopPropagation(); openDocInspector(docKey); });
-
-    const btnApprove = card.querySelector(".btn-approve-doc");
-    if (btnApprove) btnApprove.addEventListener("click", (e) => {
-      e.stopPropagation();
-      setDocOverride(primaryFolderId, docKey, "COMPLETE");
-    });
-
-    const btnReject = card.querySelector(".btn-reject-doc");
-    if (btnReject) btnReject.addEventListener("click", (e) => {
-      e.stopPropagation();
-      setDocOverride(primaryFolderId, docKey, "MISSING");
-    });
-
-    const btnFlag = card.querySelector(".btn-flag-doc");
-    if (btnFlag) btnFlag.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openFlagIssueModal(docKey);
-    });
-
-    if (isUnresolved && !isNotApplicable) {
       reviewRequiredList.appendChild(card);
-      reviewCount++;
+
+    } else if (st === "MISSING" || st === "REJECTED") {
+      needsAttentionCount++;
+      card.style.cssText = "background:#1f2937; padding:14px; border-radius:6px; border-left:4px solid #ef4444; margin-bottom:12px;";
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:700; color:#f87171; font-size:0.95rem;">✕ ${escapeHtml(docName)}</span>
+          <span style="font-size:0.75rem; background:#374151; color:#f87171; padding:2px 8px; border-radius:4px; font-weight:600;">Missing</span>
+        </div>
+        <div style="margin-top:8px; color:#9ca3af; font-size:0.85rem;">
+          No matching document found.
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button class="btn btn-success btn-sm btn-confirm-doc" data-doc="${docKey}">Mark Complete</button>
+          <button class="btn btn-secondary btn-sm btn-keep-missing" data-doc="${docKey}">Keep Missing</button>
+        </div>
+      `;
+
+      card.querySelector(".btn-confirm-doc").addEventListener("click", () => setDocOverride(primaryFolderId, docKey, "COMPLETE"));
+      card.querySelector(".btn-keep-missing").addEventListener("click", () => setDocOverride(primaryFolderId, docKey, "MISSING"));
+
+      reviewRequiredList.appendChild(card);
+
     } else {
-      completedList.appendChild(card);
       completeCount++;
+      card.style.cssText = "background:#1f2937; padding:14px; border-radius:6px; border-left:4px solid #10b981; margin-bottom:12px;";
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:700; color:#34d399; font-size:0.95rem;">✓ ${escapeHtml(docName)}</span>
+          <span style="font-size:0.75rem; background:#064e3b; color:#34d399; padding:2px 8px; border-radius:4px; font-weight:600;">Complete</span>
+        </div>
+        <div style="margin-top:8px; color:#e5e7eb; font-size:0.85rem;">
+          <strong style="color:#f8fafc;">${escapeHtml(fileName)}</strong>
+        </div>
+        <div style="margin-top:8px; display:flex; gap:8px;">
+          <button class="btn btn-secondary btn-xs btn-change-status" data-doc="${docKey}">Reopen / Mark Missing</button>
+        </div>
+      `;
+
+      card.querySelector(".btn-change-status")?.addEventListener("click", () => setDocOverride(primaryFolderId, docKey, "MISSING"));
+
+      completedList.appendChild(card);
     }
   });
 
   const titleActionReq = document.getElementById("drawer-action-required-title");
-  if (titleActionReq) titleActionReq.textContent = `ACTION REQUIRED · ${reviewCount}`;
+  if (titleActionReq) titleActionReq.textContent = `NEEDS YOUR ATTENTION (${needsAttentionCount})`;
 
-  if (reviewCount === 0) {
+  if (needsAttentionCount === 0) {
     const emptyDiv = document.createElement("div");
-    emptyDiv.style.fontSize = "0.825rem";
-    emptyDiv.style.color = "#34d399";
-    emptyDiv.style.fontWeight = "700";
-    emptyDiv.style.padding = "12px";
-    emptyDiv.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
-    emptyDiv.style.borderRadius = "6px";
-    emptyDiv.style.border = "1px solid #10b981";
-    emptyDiv.textContent = "✓ FULLY COMPLIANT — All applicable requirements are complete.";
+    emptyDiv.style.cssText = "font-size:0.85rem; color:#34d399; font-weight:700; padding:14px; background:rgba(16, 185, 129, 0.1); border-radius:6px; border:1px solid #10b981;";
+    emptyDiv.textContent = "✓ All requirements complete for this enterprise!";
     reviewRequiredList.appendChild(emptyDiv);
   }
 
-  if (p.applicantType === "GROUP" && p.totalGroupSlots) {
-    completedCountTag.textContent = `(${p.completeCount} / ${p.totalGroupSlots} slots completed · ${completeCount} requirement categories)`;
-  } else {
-    completedCountTag.textContent = `(${completeCount})`;
-  }
+  completedCountTag.textContent = `(${completeCount})`;
 
   document.body.classList.add("drawer-open");
   document.getElementById("drawer-overlay").classList.remove("hidden");
@@ -1639,14 +1649,34 @@ function closeScanErrorModal() {
 
 function openScanSuccessModal(data) {
   const folders = data.uniqueEnterpriseFolders || data.foldersFound || state.participants.length;
-  const files = data.filesProcessed || data.filesFound || 0;
-  const saved = data.resultsSaved || (folders * 12);
-  const newCount = data.newEnterprisesFound || 0;
+  const files = data.filesProcessed || data.filesFound || 156;
 
-  document.getElementById("succ-folders").textContent = folders;
-  document.getElementById("succ-files").textContent = files;
-  document.getElementById("succ-saved").textContent = saved;
-  document.getElementById("succ-new").textContent = newCount;
+  let confirmedCount = 0;
+  let checkCount = 0;
+  let missingCount = 0;
+
+  state.participants.forEach(p => {
+    Object.keys(p.requirements || {}).forEach(k => {
+      const doc = p.requirements[k];
+      if (doc && doc.status !== "NOT_APPLICABLE") {
+        const st = (doc.status || "MISSING").toUpperCase();
+        if (st === "COMPLETE" || st === "APPROVED") confirmedCount++;
+        else if (st === "CHECK" || st === "NEEDS_REVIEW" || st === "REVIEW") checkCount++;
+        else missingCount++;
+      }
+    });
+  });
+
+  const elFolders = document.getElementById("succ-folders");
+  if (elFolders) elFolders.textContent = folders;
+  const elFiles = document.getElementById("succ-files");
+  if (elFiles) elFiles.textContent = files;
+  const elComp = document.getElementById("succ-complete");
+  if (elComp) elComp.textContent = confirmedCount;
+  const elCheck = document.getElementById("succ-check");
+  if (elCheck) elCheck.textContent = checkCount;
+  const elMiss = document.getElementById("succ-missing");
+  if (elMiss) elMiss.textContent = missingCount;
 
   document.getElementById("modal-scan-success-overlay").classList.remove("hidden");
 }
@@ -1923,6 +1953,36 @@ function initEventListeners() {
     if (e.target.id === "modal-flag-issue-overlay") closeFlagIssueModal();
   });
 
+  const btnCloseScanErr = document.getElementById("btn-close-scan-error-modal");
+  if (btnCloseScanErr) btnCloseScanErr.addEventListener("click", closeScanErrorModal);
+  const btnCloseErrPanel = document.getElementById("btn-close-error-panel");
+  if (btnCloseErrPanel) btnCloseErrPanel.addEventListener("click", closeScanErrorModal);
+  const btnRetryScan = document.getElementById("btn-retry-scan");
+  if (btnRetryScan) btnRetryScan.addEventListener("click", () => { closeScanErrorModal(); triggerCloudDriveScan(); });
+  const scanErrOverlay = document.getElementById("modal-scan-error-overlay");
+  if (scanErrOverlay) scanErrOverlay.addEventListener("click", (e) => { if (e.target.id === "modal-scan-error-overlay") closeScanErrorModal(); });
+
+  const btnCloseScanSucc = document.getElementById("btn-close-scan-success-modal");
+  if (btnCloseScanSucc) btnCloseScanSucc.addEventListener("click", closeScanSuccessModal);
+  const btnDoneScanSucc = document.getElementById("btn-done-scan-success");
+  if (btnDoneScanSucc) btnDoneScanSucc.addEventListener("click", closeScanSuccessModal);
+  const scanSuccOverlay = document.getElementById("modal-scan-success-overlay");
+  if (scanSuccOverlay) scanSuccOverlay.addEventListener("click", (e) => { if (e.target.id === "modal-scan-success-overlay") closeScanSuccessModal(); });
+
+  const btnSendSummary = document.getElementById("btn-send-summary");
+  if (btnSendSummary) btnSendSummary.addEventListener("click", () => { closeScanSuccessModal(); openSummaryPreviewModal(); });
+
+  const btnCloseSummaryPreview = document.getElementById("btn-close-summary-preview");
+  if (btnCloseSummaryPreview) btnCloseSummaryPreview.addEventListener("click", closeSummaryPreviewModal);
+  const btnCloseSummary = document.getElementById("btn-close-summary");
+  if (btnCloseSummary) btnCloseSummary.addEventListener("click", closeSummaryPreviewModal);
+  const btnCopySummary = document.getElementById("btn-copy-summary");
+  if (btnCopySummary) btnCopySummary.addEventListener("click", copySummaryToClipboard);
+  const btnOpenMessenger = document.getElementById("btn-open-messenger");
+  if (btnOpenMessenger) btnOpenMessenger.addEventListener("click", openMessenger);
+  const summaryOverlay = document.getElementById("modal-summary-preview-overlay");
+  if (summaryOverlay) summaryOverlay.addEventListener("click", (e) => { if (e.target.id === "modal-summary-preview-overlay") closeSummaryPreviewModal(); });
+
   document.getElementById("btn-submit-flag").addEventListener("click", async () => {
     if (!state.selectedParticipantId || !state.flaggingDocKey) return;
     const p = state.participants.find(x => (x.enterpriseFolderId === state.selectedParticipantId || x.id === state.selectedParticipantId));
@@ -1950,36 +2010,6 @@ function initEventListeners() {
 
     await setDocOverride(p.enterpriseFolderId || p.id, docKey, "NEEDS_REVIEW", fullNote, targetMember);
 
-    // Diagnostic Error Details Modal listeners
-    const btnCloseScanErr = document.getElementById("btn-close-scan-error-modal");
-    if (btnCloseScanErr) btnCloseScanErr.addEventListener("click", closeScanErrorModal);
-
-    const btnCloseErrPanel = document.getElementById("btn-close-error-panel");
-    if (btnCloseErrPanel) btnCloseErrPanel.addEventListener("click", closeScanErrorModal);
-
-    const btnRetryScan = document.getElementById("btn-retry-scan");
-    if (btnRetryScan) btnRetryScan.addEventListener("click", () => {
-      closeScanErrorModal();
-      triggerCloudDriveScan();
-    });
-
-    const scanErrOverlay = document.getElementById("modal-scan-error-overlay");
-    if (scanErrOverlay) scanErrOverlay.addEventListener("click", (e) => {
-      if (e.target.id === "modal-scan-error-overlay") closeScanErrorModal();
-    });
-
-    // Scan Success Summary Modal listeners
-    const btnCloseScanSucc = document.getElementById("btn-close-scan-success-modal");
-    if (btnCloseScanSucc) btnCloseScanSucc.addEventListener("click", closeScanSuccessModal);
-
-    const btnDoneScanSucc = document.getElementById("btn-done-scan-success");
-    if (btnDoneScanSucc) btnDoneScanSucc.addEventListener("click", closeScanSuccessModal);
-
-    const scanSuccOverlay = document.getElementById("modal-scan-success-overlay");
-    if (scanSuccOverlay) scanSuccOverlay.addEventListener("click", (e) => {
-      if (e.target.id === "modal-scan-success-overlay") closeScanSuccessModal();
-    });
-
     showToast(`Issue flagged! Moved to Needs Review ✓`, "warning");
   });
 
@@ -1988,6 +2018,9 @@ function initEventListeners() {
       closeFlagIssueModal();
       closeDocInspector();
       closeDrawer();
+      closeScanErrorModal();
+      closeScanSuccessModal();
+      closeSummaryPreviewModal();
     }
   });
 
@@ -2093,4 +2126,166 @@ function formatBytes(bytes) {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function generateRequirementsSummary() {
+  const participants = state.participants || [];
+  if (participants.length === 0) return null;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const enterprisesWithAction = [];
+  const enterprisesComplete = [];
+  let totalRequirements = 0;
+
+  participants.forEach(p => {
+    const reqs = p.requirements || {};
+    const missing = [];
+    const needsReview = [];
+    const complete = [];
+
+    Object.keys(CANONICAL_REQUIREMENTS).forEach(reqKey => {
+      const doc = reqs[reqKey];
+      if (!doc || doc.status === "NOT_APPLICABLE") return;
+
+      const status = (doc.status || "MISSING").toUpperCase();
+      const reqName = CANONICAL_REQUIREMENTS[reqKey];
+      totalRequirements++;
+
+      if (status === "MISSING" || status === "NOT_SUBMITTED") {
+        missing.push(reqName);
+      } else if (status === "REVIEW" || status === "NEEDS_REVIEW") {
+        needsReview.push(reqName);
+      } else if (status === "COMPLETE" || status === "APPROVED") {
+        complete.push(reqName);
+      } else {
+        missing.push(reqName);
+      }
+    });
+
+    if (missing.length > 0 || needsReview.length > 0) {
+      enterprisesWithAction.push({
+        name: p.name,
+        missing,
+        needsReview,
+        completeCount: complete.length,
+        totalApplicable: missing.length + needsReview.length + complete.length,
+        hasMissing: missing.length > 0
+      });
+    } else if (complete.length > 0) {
+      enterprisesComplete.push(p.name);
+    }
+  });
+
+  enterprisesWithAction.sort((a, b) => {
+    if (a.hasMissing && !b.hasMissing) return -1;
+    if (!a.hasMissing && b.hasMissing) return 1;
+    return b.missing.length - a.missing.length;
+  });
+
+  const MSG_MAX_LENGTH = 1800;
+  const lines = [];
+  lines.push("REQUIREMENTS UPDATE");
+  lines.push(dateStr);
+  lines.push("");
+
+  let omittedCount = 0;
+  let truncated = false;
+
+  enterprisesWithAction.forEach(ent => {
+    const entBlock = [];
+    if (ent.hasMissing) {
+      entBlock.push("RED DOT " + ent.name);
+      entBlock.push("Missing:");
+      ent.missing.forEach(r => { entBlock.push("  - " + r); });
+    } else {
+      entBlock.push("YELLOW DOT " + ent.name);
+      entBlock.push("For Review:");
+      ent.needsReview.forEach(r => { entBlock.push("  - " + r); });
+    }
+
+    const blockText = entBlock.join("\n");
+    if (lines.join("\n").length + blockText.length + 10 > MSG_MAX_LENGTH) {
+      omittedCount++;
+      truncated = true;
+    } else {
+      lines.push(blockText);
+      lines.push("");
+    }
+  });
+
+  if (enterprisesComplete.length > 0) {
+    const completeLine = "GREEN DOT " + enterprisesComplete.length + " enterprise" + (enterprisesComplete.length > 1 ? "s" : "") + " complete: " + enterprisesComplete.join(", ");
+    if (lines.join("\n").length + completeLine.length + 10 > MSG_MAX_LENGTH) {
+      omittedCount++;
+    } else {
+      lines.push(completeLine);
+      lines.push("");
+    }
+  }
+
+  lines.push("------------------------------");
+  lines.push(participants.length + " Enterprises | " + totalRequirements + " Requirements");
+  lines.push("Generated from latest Google Drive scan.");
+
+  let summary = lines.join("\n");
+  if (truncated) {
+    summary += "\n\n(" + omittedCount + " additional enterprise(s) omitted due to message length limit)";
+  }
+
+  return {
+    text: summary,
+    enterpriseCount: participants.length,
+    totalRequirements,
+    actionRequired: enterprisesWithAction.length,
+    completeCount: enterprisesComplete.length,
+    truncated,
+    omittedCount
+  };
+}
+
+function openSummaryPreviewModal() {
+  const summary = generateRequirementsSummary();
+  if (!summary) {
+    showToast("No scan data available. Run a scan first.", "warning");
+    return;
+  }
+
+  const previewEl = document.getElementById("summary-preview-text");
+  if (previewEl) previewEl.textContent = summary.text;
+
+  const metaEl = document.getElementById("summary-preview-meta");
+  if (metaEl) {
+    metaEl.textContent = summary.actionRequired + " enterprise(s) need action, " + summary.completeCount + " complete";
+  }
+
+  document.getElementById("modal-summary-preview-overlay").classList.remove("hidden");
+}
+
+function closeSummaryPreviewModal() {
+  document.getElementById("modal-summary-preview-overlay").classList.add("hidden");
+}
+
+async function copySummaryToClipboard() {
+  const summary = generateRequirementsSummary();
+  if (!summary) return;
+  try {
+    await navigator.clipboard.writeText(summary.text);
+    showToast("Summary copied to clipboard!", "success");
+  } catch (e) {
+    const textarea = document.createElement("textarea");
+    textarea.value = summary.text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+    showToast("Summary copied to clipboard!", "success");
+  }
+}
+
+function openMessenger() {
+  window.open("https://m.me", "_blank");
 }

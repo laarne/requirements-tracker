@@ -4,51 +4,51 @@ const { google } = require('googleapis');
 const CANONICAL_REQUIREMENTS = {
   "applicationLetter": {
     name: "Application Letter",
-    keywords: ["application letter", "letter of application", "app letter", "intent letter", "joint application", "start up individual application"]
+    keywords: ["application letter", "letter of application", "app letter", "intent letter", "joint application", "start up individual application", "start-up application", "joint start-up", "joint startup", "startup application", "application"]
   },
   "applicationForm": {
     name: "Application Form",
-    keywords: ["application form", "app form", "form b", "start up form", "entry form", "registration form"]
+    keywords: ["application form", "app form", "form b", "start up form", "entry form", "registration form", "start-up form", "form b application", "yfc form"]
   },
   "businessModelCanvas": {
     name: "Business Model Canvas (BMC)",
-    keywords: ["business model canvas", "business model", "bmc template", "canvas", "bmc"]
+    keywords: ["business model canvas", "business model", "bmc template", "canvas", "bmc", "youth agri-business model", "agri business model", "agribusiness model", "business plan"]
   },
   "bmcFinancials": {
     name: "BMC Financials",
-    keywords: ["bmc financial", "financial projections", "projections", "financial plan"]
+    keywords: ["bmc financial", "financial projections", "projections", "financial plan", "bmc financials", "projected financial"]
   },
   "financialFigures": {
     name: "Financial Figures / Expenses",
-    keywords: ["activity and financial plan", "financial plan", "cashflow", "cash flow", "financial statement", "budget", "income statement", "balance sheet", "expenses"]
+    keywords: ["activity and financial plan", "financial plan", "cashflow", "cash flow", "financial statement", "budget", "income statement", "balance sheet", "expenses", "financial figures", "financial projection", "projected expenses", "projected income"]
   },
   "validId": {
     name: "Valid ID",
-    keywords: ["valid id", "government id", "national id", "philid", "driver license", "drivers license", "umid", "voter id", "postal id", "prc id", "passport id", "passport", "id card", "scanned copy valid id"]
+    keywords: ["valid id", "government id", "national id", "philid", "driver license", "drivers license", "umid", "voter id", "postal id", "prc id", "passport id", "passport", "id card", "scanned copy valid id", "identification", "philsys", "national id", " Philippine identification"]
   },
   "swornStatement": {
     name: "Sworn Statement of New Business",
-    keywords: ["sworn statement", "affidavit", "form c", "form j", "declaration new business", "authority to use land"]
+    keywords: ["sworn statement", "affidavit", "joint affidavit", "form c", "form j", "declaration new business", "authority to use land", "sworn statement of new business"]
   },
   "proofOfResidency": {
     name: "Proof of Residency",
-    keywords: ["proof of residency", "residency", "residence", "barangay certificate", "barangay clearance", "certificate of residency", "proof of address"]
+    keywords: ["proof of residency", "residency", "residence", "barangay certificate", "barangay clearance", "certificate of residency", "proof of address", "proof of residence"]
   },
   "endorsementLetter": {
     name: "Endorsement Letter",
-    keywords: ["endorsement letter", "endorsement", "endorsment", "recommending letter", "recommendation", "reccomendation", "lgu endorsement", "endorse", "agriculture office"]
+    keywords: ["endorsement letter", "endorsement", "endorsment", "recommending letter", "recommendation", "reccomendation", "lgu endorsement", "endorse", "agriculture office", "municipal agriculture"]
   },
   "photo2x2": {
     name: "2 x 2 Photo",
-    keywords: ["2x2", "2 x 2", "2by2", "id photo", "applicant photo", "headshot", "passport photo", "picture", "photo"]
+    keywords: ["2x2", "2 x 2", "2by2", "id photo", "applicant photo", "headshot", "passport photo", "picture", "photo", "2x2 picture", "passport picture"]
   },
   "signatures": {
     name: "Required Signatures",
-    keywords: ["signed", "signature", "signed form", "signed copy", "with signature"]
+    keywords: ["signed", "signature", "signed form", "signed copy", "with signature", "signatories", "signed application"]
   },
   "declarationOfIntent": {
     name: "Declaration of Intent",
-    keywords: ["declaration of intent", "declaration intent", "intent declaration", "group declaration", "annex a"]
+    keywords: ["declaration of intent", "declaration intent", "intent declaration", "group declaration", "annex a", "joint declaration", "declaration"]
   }
 };
 
@@ -57,13 +57,36 @@ const FILENAME_ALIASES = {
   "passport": "validId",
   "id picture": "validId",
   "id pic": "validId",
+  "identification": "validId",
+  "valid ids": "validId",
   "2x2 picture": "photo2x2",
   "2x2 photo": "photo2x2",
   "id photo 2x2": "photo2x2",
   "passport picture": "photo2x2",
   "headshot": "photo2x2",
+  "photo": "photo2x2",
+  "picture": "photo2x2",
   "bmc financials": "bmcFinancials",
   "bmc financial": "bmcFinancials",
+  "financial projections": "bmcFinancials",
+  "joint affidavit": "swornStatement",
+  "affidavit": "swornStatement",
+  "barangay certificate": "proofOfResidency",
+  "barangay clearance": "proofOfResidency",
+  "certificate of residency": "proofOfResidency",
+  "endorsement": "endorsementLetter",
+  "lgu endorsement": "endorsementLetter",
+  "application": "applicationForm",
+  "form b": "applicationForm",
+  "registration form": "applicationForm",
+  "business model": "businessModelCanvas",
+  "bmc": "businessModelCanvas",
+  "canvas": "businessModelCanvas",
+  "signed": "signatures",
+  "signature": "signatures",
+  "joint start-up": "applicationLetter",
+  "joint startup": "applicationLetter",
+  "declaration": "declarationOfIntent",
 };
 
 const MASTER_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || "12KBAKnxhkKOPBQbZXlWLfsolsBUrDf7y";
@@ -79,8 +102,8 @@ module.exports = async (req, res) => {
 
   const reqId = req.headers['x-scan-request-id'] || (req.body && req.body.requestId) || ('req_' + Date.now());
 
-  const supabaseUrl = process.env.SUPABASE_URL || "https://gndnmbdzfoamtgjkvnyr.supabase.co";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_zojIDwrTmNXHQLWuOhm7yQ_2pIvgypM";
+  const supabaseUrl = process.env.SUPABASE_URL || "https://wlpapthqjhutjbrsikos.supabase.co";
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscGFwdGhxamh1dGpicnNpa29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTM2MDgsImV4cCI6MjEwMTQyOTYwOH0.UD8YtH7JQR53hhD1WbCB9LDAtnUa5DJRP4GAYC6QbAk";
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -302,14 +325,24 @@ module.exports = async (req, res) => {
         filesFound += files.length;
         filesProcessed += files.length;
 
-        const applicantType = determineApplicantType(folder.name, files);
-        const reqs = processFilesForRequirements(files, applicantType);
+        const applicantTypeResult = determineApplicantType(folder.name, files);
+        let applicantType = applicantTypeResult.type;
+        let typeConfidence = applicantTypeResult.confidence;
+        let typeEvidence = applicantTypeResult.evidence;
+        let memberCount = applicantTypeResult.memberCount;
+        let memberNames = applicantTypeResult.memberNames;
+
+        const reqs = processFilesForRequirements(files, applicantType, memberCount, memberNames);
 
         scannedParticipants.push({
           enterpriseFolderId: folderId,
           id: entId,
           name: folder.name,
           applicantType: applicantType,
+          typeConfidence: typeConfidence,
+          typeEvidence: typeEvidence,
+          memberCount: memberCount,
+          memberNames: memberNames,
           driveUrl: folder.webViewLink || `https://drive.google.com/drive/folders/${folderId}`,
           driveFolderId: folderId,
           requirements: reqs
@@ -330,6 +363,17 @@ module.exports = async (req, res) => {
         const doc = (p.requirements && p.requirements[reqKey]) ? p.requirements[reqKey] : { status: "MISSING", files: [] };
         const topFile = doc.files && doc.files.length > 0 ? doc.files[0] : null;
 
+        const matchedFilesWithMeta = (doc.files || []).map(f => ({
+          ...f,
+          _meta: {
+            typeConfidence: p.typeConfidence || 0,
+            typeEvidence: p.typeEvidence || [],
+            memberCount: p.memberCount || 0,
+            memberNames: p.memberNames || [],
+            statusDetail: doc.statusDetail || ""
+          }
+        }));
+
         scanResultsToUpsert.push({
           enterprise_folder_id: folderId,
           enterprise_id: p.id,
@@ -338,11 +382,11 @@ module.exports = async (req, res) => {
           requirement_id: reqKey,
           file_id: topFile ? (topFile.fileId || topFile.id || "") : "",
           file_name: topFile ? topFile.name : "",
-          automated_status: doc.automatedStatus || doc.status || "MISSING",
+          automated_status: doc.status || "MISSING",
           confidence: topFile ? (topFile.confidence || 0.0) : 0.0,
           document_type: CANONICAL_REQUIREMENTS[reqKey].name,
           drive_url: p.driveUrl || `https://drive.google.com/drive/folders/${folderId}`,
-          matched_files: doc.files || [],
+          matched_files: matchedFilesWithMeta,
           scanned_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
@@ -525,7 +569,7 @@ function validateScanIntegrity(participants, scanResults) {
     if (!p.enterpriseFolderId || !p.name || !p.applicantType) {
       return { valid: false, reason: `Enterprise ${p.name || 'unknown'} has missing required metadata.` };
     }
-    if (!["INDIVIDUAL", "GROUP"].includes(p.applicantType.toUpperCase())) {
+    if (!["INDIVIDUAL", "GROUP", "CHECK", "UNKNOWN"].includes(p.applicantType.toUpperCase())) {
       return { valid: false, reason: `Enterprise ${p.name} has invalid applicant type ${p.applicantType}.` };
     }
     if (!p.requirements || Object.keys(p.requirements).length === 0) {
@@ -872,6 +916,20 @@ async function listFilesInFolder(drive, folderId) {
   return allFiles;
 }
 
+async function downloadFileContent(drive, fileId, mimeType) {
+  try {
+    if (mimeType === "application/vnd.google-apps.folder") return null;
+    const res = await drive.files.get(
+      { fileId: fileId, alt: 'media' },
+      { responseType: 'arraybuffer' }
+    );
+    return Buffer.from(res.data);
+  } catch (e) {
+    console.warn(`[DOWNLOAD] Failed to download file ${fileId}:`, e.message);
+    return null;
+  }
+}
+
 function deriveEnterpriseId(folderName) {
   let clean = folderName.replace(/^\d+[\.\s_\-]*/, '').trim();
   clean = clean.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
@@ -949,17 +1007,96 @@ function normalizeIdentityKey(str) {
 }
 
 function determineApplicantType(folderName, files) {
+  let groupScore = 0;
+  let individualScore = 0;
+  const evidence = [];
+
   const normFolder = folderName.toLowerCase();
-  if (normFolder.includes("group") || normFolder.includes("association") || normFolder.includes("coop") || normFolder.includes("corp")) {
-    return "GROUP";
-  }
-  for (const f of files) {
-    const fn = f.name.toLowerCase();
-    if (fn.includes("declaration of intent") || fn.includes("intent declaration")) {
-      return "GROUP";
+  const folderGroupTerms = ["group", "association", "coop", "corp", "joint", "partnership", "cooperative", "incorporated", "inc."];
+  const folderIndividualTerms = ["individual", "sole proprietor", "solo"];
+
+  for (const term of folderGroupTerms) {
+    if (normFolder.includes(term)) {
+      groupScore += 3;
+      evidence.push(`folder:${term}`);
     }
   }
-  return "INDIVIDUAL";
+  for (const term of folderIndividualTerms) {
+    if (normFolder.includes(term)) {
+      individualScore += 3;
+      evidence.push(`folder:${term}`);
+    }
+  }
+
+  const fileGroupTerms = [
+    "joint", "joint affidavit", "joint application", "joint start-up", "joint startup",
+    "declaration of intent", "intent declaration", "group declaration",
+    "members", "co-members", "member list", "member information",
+    "group application", "group start-up", "group startup",
+    "partnership", "cooperative", "association",
+    "multiple applicant", "multi applicant"
+  ];
+
+  const fileIndividualTerms = [
+    "individual application", "sole proprietor", "solo"
+  ];
+
+  const allFilenames = files.map(f => (f.name || "").toLowerCase()).join(" ");
+
+  for (const term of fileGroupTerms) {
+    if (allFilenames.includes(term)) {
+      groupScore += 2;
+      evidence.push(`file:${term}`);
+    }
+  }
+  for (const term of fileIndividualTerms) {
+    if (allFilenames.includes(term)) {
+      individualScore += 2;
+      evidence.push(`file:${term}`);
+    }
+  }
+
+  let memberCount = 0;
+  const memberNames = new Set();
+  for (const f of files) {
+    const attr = extractMemberAttribution(f);
+    if (attr.memberName) {
+      memberNames.add(attr.memberName);
+    }
+  }
+  memberCount = memberNames.size;
+  if (memberCount >= 2) {
+    groupScore += memberCount;
+    evidence.push(`members:${memberCount}`);
+  }
+
+  const hasDeclarationOfIntent = files.some(f => {
+    const fn = (f.name || "").toLowerCase();
+    return fn.includes("declaration") || fn.includes("intent");
+  });
+  if (hasDeclarationOfIntent) {
+    groupScore += 3;
+    evidence.push("file:declaration_of_intent");
+  }
+
+  const hasJointAffidavit = files.some(f => {
+    const fn = (f.name || "").toLowerCase();
+    return fn.includes("joint") && fn.includes("affidavit");
+  });
+  if (hasJointAffidavit) {
+    groupScore += 4;
+    evidence.push("file:joint_affidavit");
+  }
+
+  console.log(`[CLASSIFY] "${folderName}": groupScore=${groupScore}, individualScore=${individualScore}, evidence=[${evidence.join(", ")}], members=${memberCount}`);
+
+  if (groupScore >= 4 && groupScore > individualScore) {
+    return { type: "GROUP", confidence: Math.min(groupScore / 10, 1.0), evidence, memberCount, memberNames: Array.from(memberNames) };
+  } else if (individualScore >= 3 && individualScore > groupScore) {
+    return { type: "INDIVIDUAL", confidence: Math.min(individualScore / 5, 1.0), evidence, memberCount: 0, memberNames: [] };
+  } else {
+    return { type: "CHECK", confidence: 0, evidence, memberCount: 0, memberNames: [] };
+  }
 }
 
 function extractMemberAttribution(f) {
@@ -979,7 +1116,8 @@ function extractMemberAttribution(f) {
   if (matchParen) {
     const candidate = matchParen[1].trim();
     const upper = candidate.toUpperCase();
-    if (candidate && !["NEW", "PDF", "DOCX", "XLSX", "JPG", "PNG", "COPY", "UPDATED", "FINAL", "1PAGE"].includes(upper)) {
+    const FN_EXCLUSIONS = ["NEW", "PDF", "DOCX", "XLSX", "JPG", "PNG", "COPY", "UPDATED", "FINAL", "1PAGE", "APLICATION", "APPLICATION", "FORM", "SIGNED", "PHOTO", "PICTURE", "VALID", "PASSPORT", "LETTER", "STATEMENT", "AFFIDAVIT", "DECLARATION", "ENDORSEMENT", "CERTIFICATE", "RESIDENCY", "FINANCIAL", "MODEL", "CANVAS", "FIGURES", "EXPENSES", "SIGNATURES", "BUDGET", "INCOME", "BALANCE", "SHEET"];
+    if (candidate && !FN_EXCLUSIONS.includes(upper)) {
       return { memberName: upper, memberSource: "filename" };
     }
   }
@@ -988,7 +1126,8 @@ function extractMemberAttribution(f) {
   if (matchSep) {
     const candidate = matchSep[1].trim();
     const upper = candidate.toUpperCase();
-    if (candidate && !["NEW", "PDF", "DOCX", "XLSX", "JPG", "PNG", "COPY", "UPDATED", "FINAL"].includes(upper)) {
+    const SEP_EXCLUSIONS = ["NEW", "PDF", "DOCX", "XLSX", "JPG", "PNG", "COPY", "UPDATED", "FINAL", "APLICATION", "APPLICATION", "FORM", "SIGNED", "PHOTO", "PICTURE", "VALID", "PASSPORT", "LETTER", "STATEMENT", "AFFIDAVIT", "DECLARATION", "ENDORSEMENT", "CERTIFICATE", "RESIDENCY", "FINANCIAL", "MODEL", "CANVAS", "FIGURES", "EXPENSES", "SIGNATURES", "BUDGET", "INCOME", "BALANCE", "SHEET", "STARTUP", "START-UP", "OTHER"];
+    if (candidate && !SEP_EXCLUSIONS.includes(upper)) {
       return { memberName: upper, memberSource: "filename" };
     }
   }
@@ -996,12 +1135,101 @@ function extractMemberAttribution(f) {
   return { memberName: null, memberSource: "unknown" };
 }
 
-function processFilesForRequirements(files, applicantType) {
-  const reqs = {};
+function normalizeFilename(name) {
+  if (!name) return "";
+  let n = name.toLowerCase();
+  n = n.replace(/[\(\)\[\]]/g, ' ');
+  n = n.replace(/[-_]/g, ' ');
+  n = n.replace(/\b[a-z]\d/g, m => ' ' + m[1]);
+  n = n.replace(/^\d+[\.\s]+/, '');
+  n = n.replace(/\.(pdf|docx?|xlsx?|jpg|jpeg|png|gif|tiff?)$/i, '');
+  n = n.replace(/\s+/g, ' ').trim();
+  return n;
+}
 
-  // Check bmcFinancials BEFORE businessModelCanvas to avoid false positives
+function matchFilenameToRequirement(reqKey, filename, mimeType, applicantType) {
+  const req = CANONICAL_REQUIREMENTS[reqKey];
+  if (!req) return null;
+
+  const normalized = normalizeFilename(filename);
+  const lowerFilename = normalized.toLowerCase();
+  const mime = (mimeType || "").toLowerCase();
+
+  let score = 0;
+  const evidence = [];
+  let method = "NONE";
+
+  for (const alias of Object.keys(FILENAME_ALIASES)) {
+    if (FILENAME_ALIASES[alias] === reqKey && lowerFilename.includes(alias.toLowerCase())) {
+      score = 0.95;
+      evidence.push(`Alias match: "${alias}"`);
+      method = "FILENAME_ALIAS";
+      break;
+    }
+  }
+
+  if (score === 0) {
+    for (const kw of req.keywords) {
+      if (lowerFilename.includes(kw.toLowerCase())) {
+        score = 0.9;
+        evidence.push(`Keyword match: "${kw}"`);
+        method = "FILENAME_KEYWORD";
+        break;
+      }
+    }
+  }
+
+  if (score === 0) {
+    const fnWords = lowerFilename.split(/\s+/);
+    const kwWords = req.keywords.flatMap(kw => kw.toLowerCase().split(/\s+/));
+    const overlap = fnWords.filter(w => kwWords.includes(w) && w.length > 3);
+    if (overlap.length >= 2) {
+      score = 0.6;
+      evidence.push(`Word overlap: ${overlap.join(", ")}`);
+      method = "FILENAME_PARTIAL";
+    }
+  }
+
+  if (score === 0 && reqKey === "photo2x2") {
+    if (mime.startsWith("image/")) {
+      score = 0.3;
+      evidence.push("Image file (no filename match)");
+      method = "MIME_TYPE";
+    }
+  }
+
+  if (score === 0 && reqKey === "validId") {
+    if (mime.includes("image") || lowerFilename.endsWith(".pdf")) {
+      if (lowerFilename.includes("id") || lowerFilename.includes("passport") || lowerFilename.includes("license")) {
+        score = 0.5;
+        evidence.push("Possible ID file (weak filename match)");
+        method = "FILENAME_PARTIAL";
+      }
+    }
+  }
+
+  if (score === 0) return null;
+
+  let statusDetail;
+  if (score >= 0.85) {
+    statusDetail = `Strong match: "${filename}" (${method}, confidence: ${score})`;
+  } else {
+    statusDetail = `Possible match: "${filename}" (${method}, confidence: ${score}). Please verify.`;
+  }
+
+  return {
+    confidence: score,
+    evidence,
+    method,
+    statusDetail,
+    filename
+  };
+}
+
+function processFilesForRequirements(files, applicantType, memberCount = 0, memberNames = []) {
+  const reqs = {};
   const reqKeyOrder = [
-    "applicationLetter", "applicationForm", "bmcFinancials", "businessModelCanvas",
+    "bmcFinancials", "businessModelCanvas", "applicationForm", "applicationLetter",
     "financialFigures", "validId", "swornStatement", "proofOfResidency",
     "endorsementLetter", "photo2x2", "signatures", "declarationOfIntent"
   ];
@@ -1009,102 +1237,54 @@ function processFilesForRequirements(files, applicantType) {
   const fileAssignments = new Map();
 
   for (const reqKey of reqKeyOrder) {
-    const reqDef = CANONICAL_REQUIREMENTS[reqKey];
     const matchedFiles = [];
 
     files.forEach(f => {
-      if (fileAssignments.has(f.id) && fileAssignments.get(f.id) === reqKey) return;
+      if (fileAssignments.has(f.id)) return;
 
-      const fnNorm = f.name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-      let matched = false;
-      let matchSource = "";
+      const matchResult = matchFilenameToRequirement(reqKey, f.name, f.mimeType, applicantType);
 
-      // Layer 1: Filename aliases (highest confidence)
-      const aliasKey = fnNorm;
-      if (FILENAME_ALIASES[aliasKey] === reqKey) {
-        matched = true;
-        matchSource = "ALIAS_EXACT";
-      }
-
-      // Layer 2: Keyword matching
-      if (!matched) {
-        for (const kw of reqDef.keywords) {
-          const kwNorm = kw.toLowerCase();
-          if (kwNorm.length <= 3) {
-            const pattern = new RegExp(`\\b${kwNorm.replace(/[^a-z0-9]/g, '')}\\b`, 'i');
-            if (pattern.test(fnNorm)) {
-              matched = true;
-              matchSource = "FILENAME_KEYWORD";
-              break;
-            }
-          } else {
-            if (fnNorm.includes(kwNorm)) {
-              matched = true;
-              matchSource = "FILENAME_KEYWORD";
-              break;
-            }
-          }
-        }
-      }
-
-      // Layer 3: MIME-type awareness
-      if (!matched && f.mimeType) {
-        const mime = f.mimeType.toLowerCase();
-        if (reqKey === "validId" && (mime.includes("image/") || mime === "application/pdf")) {
-          const hasIdHint = /\b(id|passport|license|valid|philid|umid|voter|postal|prc|driver|philhealth|sss)\b/i.test(fnNorm);
-          if (hasIdHint) {
-            matched = true;
-            matchSource = "MIME_TYPE_HINT";
-          }
-        }
-        if (reqKey === "photo2x2" && mime.startsWith("image/")) {
-          const hasPhotoHint = /\b(photo|picture|headshot|2x2)\b/i.test(fnNorm);
-          if (hasPhotoHint) {
-            matched = true;
-            matchSource = "MIME_TYPE_HINT";
-          }
-        }
-      }
-
-      if (matched) {
-        const confidence = matchSource === "ALIAS_EXACT" ? 0.95 :
-                          matchSource === "FILENAME_KEYWORD" ? 0.92 :
-                          matchSource === "MIME_TYPE_HINT" ? 0.7 : 0.85;
-        const attr = extractMemberAttribution(f);
+      if (matchResult && matchResult.confidence > 0) {
         matchedFiles.push({
           fileId: f.id,
           name: f.name,
-          confidence: confidence,
+          confidence: matchResult.confidence,
           webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
-          detectionMethod: matchSource,
+          detectionMethod: matchResult.method,
           size: parseInt(f.size || '0', 10),
-          memberName: attr.memberName,
-          memberSource: attr.memberSource
+          evidence: matchResult.evidence,
+          statusDetail: matchResult.statusDetail
         });
         fileAssignments.set(f.id, reqKey);
       }
     });
 
+    matchedFiles.sort((a, b) => b.confidence - a.confidence);
+
     let status = "MISSING";
+    let statusDetail = "No matching document found.";
+    const matchedFileNames = matchedFiles.map(f => f.name);
+
     if (matchedFiles.length > 0) {
       const topMatch = matchedFiles[0];
-      if (reqKey === "photo2x2" || reqKey === "signatures") {
-        status = "NEEDS_REVIEW";
-      } else if (reqKey === "validId") {
-        status = topMatch.confidence >= 0.85 ? "COMPLETE" : "NEEDS_REVIEW";
-      } else if (applicantType !== "GROUP" && matchedFiles.length > 1) {
-        status = "NEEDS_REVIEW";
-      } else {
+      if (topMatch.confidence >= 0.90) {
         status = "COMPLETE";
+        statusDetail = `Confirmed match: "${topMatch.name}"`;
+      } else {
+        status = "CHECK";
+        statusDetail = `Possible document found: "${topMatch.name}". Please verify.`;
       }
     } else if (reqKey === "declarationOfIntent" && applicantType === "INDIVIDUAL") {
       status = "NOT_APPLICABLE";
+      statusDetail = "Not required for INDIVIDUAL applicants";
     }
 
     reqs[reqKey] = {
       status: status,
       automatedStatus: status,
-      files: matchedFiles
+      files: matchedFiles,
+      matchedFileNames: matchedFileNames,
+      statusDetail: statusDetail
     };
   }
 

@@ -19,8 +19,8 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div class="brand-icon" style="width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;">
+          <img src="assets/logo.jpg" alt="YFC Logo" style="width:100%;height:100%;object-fit:cover;">
         </div>
         <div>
           <h1 class="brand-title">Unofficial YFC Compliance Tracker</h1>
@@ -249,12 +249,9 @@
         <thead>
           <tr>
             <th>ENTERPRISE</th>
-            <th>TYPE</th>
-            <th>COMPLIANCE</th>
-            <th>COMPLETE</th>
-            <th>NEEDS REVIEW</th>
-            <th>MISSING</th>
-            <th>PRIORITY</th>
+            <th>APPLICANT</th>
+            <th>PROGRESS</th>
+            <th>NEEDS ATTENTION</th>
             <th style="text-align:right;">ACTION</th>
           </tr>
         </thead>
@@ -553,17 +550,52 @@
       </div>
 
       <div class="modal-body" style="padding:20px;">
-        <div style="background:#1f2937; padding:14px; border-radius:6px; border:1px solid #374151; margin-bottom:16px;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.85rem; color:#f1f5f9;">
-            <div>Enterprises Scanned: <strong style="color:#34d399;" id="succ-folders">19</strong></div>
-            <div>Files Processed: <strong style="color:#818cf8;" id="succ-files">182</strong></div>
-            <div>Results Saved: <strong style="color:#f59e0b;" id="succ-saved">228</strong></div>
-            <div>New Enterprises: <strong style="color:#38bdf8;" id="succ-new">0</strong></div>
+        <div style="background:#111827; padding:16px; border-radius:8px; border:1px solid #374151; margin-bottom:16px;">
+          <div style="font-size:0.9rem; color:#e5e7eb; font-weight:600; margin-bottom:12px;">
+            <span id="succ-folders">19</span> enterprises scanned &bull; <span id="succ-files">156</span> files checked
+          </div>
+          <div style="border-top:1px solid #374151; padding-top:12px; display:flex; flex-direction:column; gap:8px; font-size:0.9rem;">
+            <div style="color:#34d399; font-weight:700;">✓ <span id="succ-complete">85</span> requirements confirmed</div>
+            <div style="color:#fbbf24; font-weight:700;">⚠ <span id="succ-check">32</span> requirements need verification</div>
+            <div style="color:#f87171; font-weight:700;">✕ <span id="succ-missing">15</span> requirements appear missing</div>
           </div>
         </div>
 
-        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-          <button class="btn btn-success" id="btn-done-scan-success">Done ✓</button>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+          <button class="btn btn-secondary" id="btn-send-summary" title="Generate Messenger-ready requirements summary">
+            Send Requirements Summary
+          </button>
+          <button class="btn btn-primary" id="btn-done-scan-success">Review Items</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Preview Modal -->
+  <div class="modal-overlay hidden" id="modal-summary-preview-overlay">
+    <div class="modal" style="max-width:520px; width:92%;">
+      <div class="modal-header" style="background:#1e1b4b; border-bottom:1px solid #4338ca;">
+        <div>
+          <h3 style="color:#a5b4fc; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#818cf8;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Requirements Summary Preview
+          </h3>
+          <p class="subtitle" style="color:#c7d2fe; margin-top:2px; font-size:0.8rem;" id="summary-preview-meta"></p>
+        </div>
+        <button class="btn-close" id="btn-close-summary-preview" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px;">
+        <pre id="summary-preview-text" style="background:#111827; color:#e5e7eb; padding:14px; border-radius:6px; border:1px solid #374151; font-family:monospace; font-size:0.8rem; white-space:pre-wrap; word-break:break-word; max-height:400px; overflow-y:auto; line-height:1.5; margin:0;"></pre>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+          <button class="btn btn-secondary" id="btn-copy-summary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy Summary
+          </button>
+          <button class="btn btn-primary" id="btn-open-messenger" style="background:#0064e0; border-color:#0064e0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            Open Messenger
+          </button>
+          <button class="btn" id="btn-close-summary" style="background:#374151; border-color:#4b5563; color:#d1d5db;">Close</button>
         </div>
       </div>
     </div>

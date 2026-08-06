@@ -32,3 +32,6 @@ temp_rec.jpg
 Thumbs.db
 .vscode/
 .idea/
+
+.vercel
+.env*

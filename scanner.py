@@ -243,10 +243,22 @@ class DocumentScanner:
             )
 
         p_name_norm = normalize_text(participant_name)
-        if has_declaration_of_intent or any(k in p_name_norm for k in ["group", "coop", "association", "team", "managed"]):
+        all_fnames = " ".join([normalize_text(fd.get("name", "")) for fd in file_dicts])
+        
+        group_keywords = ["group", "coop", "association", "team", "managed", "joint", "partnership", "cooperative", "declaration of intent"]
+        indiv_keywords = ["individual application", "sole proprietor", "solo", "individual application letter", "startup individual", "application letter", "application form"]
+
+        group_score = sum(3 for k in group_keywords if k in p_name_norm) + sum(2 for k in group_keywords if k in all_fnames)
+        if has_declaration_of_intent:
+            group_score += 4
+        indiv_score = sum(3 for k in indiv_keywords if k in p_name_norm) + sum(2 for k in indiv_keywords if k in all_fnames)
+
+        if group_score >= 4 and group_score > indiv_score:
             applicant_type = "GROUP"
-        else:
+        elif indiv_score >= 2 or (group_score == 0 and len(file_dicts) > 0):
             applicant_type = "INDIVIDUAL"
+        else:
+            applicant_type = "CHECK"
 
         requirements_res: Dict[str, Any] = {}
 
@@ -262,27 +274,12 @@ class DocumentScanner:
             files = matched_files_per_req[req_id]
             if not files:
                 auto_status = "MISSING"
-            elif req_id == "bmcFinancials":
-                bmc_files = matched_files_per_req.get("businessModelCanvas", [])
-                if bmc_files or files:
-                    has_fin_text = any(k in all_text_combined for k in ["financial", "income", "balance", "cost", "revenue", "cashflow", "projection"])
-                    auto_status = "COMPLETE" if has_fin_text else "NEEDS_REVIEW"
-                else:
-                    auto_status = "MISSING"
-            elif req_id == "financialFigures":
-                has_num_text = any(k in all_text_combined for k in ["cashflow", "income", "balance sheet", "expense", "budget", "cost"])
-                auto_status = "COMPLETE" if has_num_text and files else ("NEEDS_REVIEW" if files else "MISSING")
-            elif req_id == "endorsementLetter":
-                office_found = any(k in all_text_combined for k in ["city agriculture", "municipal agriculture", "city agriculturist", "municipal agriculturist", "agriculture office"])
-                auto_status = "COMPLETE" if office_found and files else ("NEEDS_REVIEW" if files else "MISSING")
-            elif req_id in ["signatures", "photo2x2"]:
-                auto_status = "NEEDS_REVIEW" if files else "MISSING"
-            elif len(files) > 1:
-                auto_status = "NEEDS_REVIEW"
-            elif files[0]["confidence"] < 0.65 or files[0]["size"] < MIN_FILE_SIZE_BYTES:
-                auto_status = "NEEDS_REVIEW"
             else:
-                auto_status = "COMPLETE"
+                top_conf = files[0].get("confidence", 0.0) if files else 0.0
+                if top_conf >= 0.90:
+                    auto_status = "COMPLETE"
+                else:
+                    auto_status = "CHECK"
 
             requirements_res[req_id] = {
                 "status": auto_status,
@@ -297,6 +294,8 @@ class DocumentScanner:
                     requirements_res[req_id]["review"] = old_req["review"]
                     manual_st = old_req["review"].get("manualStatus")
                     if manual_st:
+                        if manual_st in ["NEEDS_REVIEW", "REVIEW"]:
+                            manual_st = "CHECK"
                         requirements_res[req_id]["status"] = manual_st
 
         return requirements_res, applicant_type
@@ -308,27 +307,27 @@ class DocumentScanner:
 
         complete_count = 0
         missing_count = 0
-        needs_review_count = 0
+        check_count = 0
 
         for req_id in applicable_req_keys:
             st = reqs[req_id].get("status", "MISSING").upper()
             if st in ["COMPLETE", "APPROVED"]:
                 complete_count += 1
-            if st == "MISSING":
+            elif st in ["MISSING", "REJECTED"]:
                 missing_count += 1
-            if st == "NEEDS_REVIEW":
-                needs_review_count += 1
+            else:
+                check_count += 1
 
         comp_rate = round((complete_count / total_applicable) * 100, 1) if total_applicable > 0 else 0.0
 
         if complete_count == total_applicable:
             overall_status = "COMPLETE"
-        elif needs_review_count > 0:
-            overall_status = "NEEDS_REVIEW"
+        elif check_count > 0:
+            overall_status = "CHECK"
         elif missing_count > 0:
             overall_status = "INCOMPLETE"
         else:
-            overall_status = "NEEDS_REVIEW"
+            overall_status = "CHECK"
 
         return {
             "id": pid,
@@ -341,7 +340,8 @@ class DocumentScanner:
             "applicableRequirementsCount": total_applicable,
             "completeCount": complete_count,
             "missingCount": missing_count,
-            "needsReviewCount": needs_review_count,
+            "reviewCount": check_count,
+            "checkCount": check_count,
             "requirements": reqs
         }
 

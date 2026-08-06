@@ -11,8 +11,8 @@ module.exports = async (req, res) => {
 
   const jobId = req.query.job_id || req.query.id;
 
-  const supabaseUrl = process.env.SUPABASE_URL || "https://gndnmbdzfoamtgjkvnyr.supabase.co";
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "sb_publishable_zojIDwrTmNXHQLWuOhm7yQ_2pIvgypM";
+  const supabaseUrl = process.env.SUPABASE_URL || "https://wlpapthqjhutjbrsikos.supabase.co";
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscGFwdGhxamh1dGpicnNpa29zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NTM2MDgsImV4cCI6MjEwMTQyOTYwOH0.UD8YtH7JQR53hhD1WbCB9LDAtnUa5DJRP4GAYC6QbAk";
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 

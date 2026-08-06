@@ -96,7 +96,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 6,
       "missingCount": 3,
-      "needsReviewCount": 2,
+      "reviewCount": 2,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -356,7 +356,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 4,
       "missingCount": 3,
-      "needsReviewCount": 4,
+      "reviewCount": 4,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -640,7 +640,7 @@
       "applicableRequirementsCount": 12,
       "completeCount": 5,
       "missingCount": 7,
-      "needsReviewCount": 0,
+      "reviewCount": 0,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -817,7 +817,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 3,
       "missingCount": 4,
-      "needsReviewCount": 4,
+      "reviewCount": 4,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -1076,7 +1076,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 4,
       "missingCount": 4,
-      "needsReviewCount": 3,
+      "reviewCount": 3,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -1372,7 +1372,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 5,
       "missingCount": 3,
-      "needsReviewCount": 3,
+      "reviewCount": 3,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -1676,7 +1676,7 @@
       "applicableRequirementsCount": 12,
       "completeCount": 4,
       "missingCount": 7,
-      "needsReviewCount": 1,
+      "reviewCount": 1,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -1875,7 +1875,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 5,
       "missingCount": 5,
-      "needsReviewCount": 1,
+      "reviewCount": 1,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -2071,7 +2071,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 4,
       "missingCount": 5,
-      "needsReviewCount": 2,
+      "reviewCount": 2,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -2289,7 +2289,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 8,
       "missingCount": 1,
-      "needsReviewCount": 2,
+      "reviewCount": 2,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -2585,7 +2585,7 @@
       "applicableRequirementsCount": 12,
       "completeCount": 7,
       "missingCount": 2,
-      "needsReviewCount": 3,
+      "reviewCount": 3,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -2958,7 +2958,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 2,
       "missingCount": 9,
-      "needsReviewCount": 0,
+      "reviewCount": 0,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -3073,7 +3073,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 0,
       "missingCount": 11,
-      "needsReviewCount": 0,
+      "reviewCount": 0,
       "requirements": {
         "applicationLetter": {
           "status": "MISSING",
@@ -3148,7 +3148,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 0,
       "missingCount": 11,
-      "needsReviewCount": 0,
+      "reviewCount": 0,
       "requirements": {
         "applicationLetter": {
           "status": "MISSING",
@@ -3223,7 +3223,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 3,
       "missingCount": 7,
-      "needsReviewCount": 1,
+      "reviewCount": 1,
       "requirements": {
         "applicationLetter": {
           "status": "COMPLETE",
@@ -3413,7 +3413,7 @@
       "applicableRequirementsCount": 11,
       "completeCount": 3,
       "missingCount": 3,
-      "needsReviewCount": 5,
+      "reviewCount": 5,
       "requirements": {
         "applicationLetter": {
           "status": "NEEDS_REVIEW",
