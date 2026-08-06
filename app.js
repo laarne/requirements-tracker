@@ -1178,28 +1178,11 @@ function renderTable() {
     let appTypeHtml = "";
     const rawType = getApplicantTypeString(p.applicantType);
     if (rawType === "GROUP") {
-      appTypeHtml = `
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span class="badge" style="background:#1e3a8a; color:#93c5fd; font-weight:700;">GROUP</span>
-          <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryKey}">Edit</button>
-        </div>
-      `;
+      appTypeHtml = `<span class="app-type-badge-group">GROUP</span>`;
     } else if (rawType === "INDIVIDUAL") {
-      appTypeHtml = `
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span class="badge" style="background:#1f2937; color:#d1d5db; font-weight:700;">INDIVIDUAL</span>
-          <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryKey}">Edit</button>
-        </div>
-      `;
+      appTypeHtml = `<span class="app-type-badge-indiv">INDIVIDUAL</span>`;
     } else {
-      appTypeHtml = `
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <span style="color:#fbbf24; font-size:0.75rem; font-weight:600;">⚠ Applicant type needs checking</span>
-          <div>
-            <button class="btn btn-warning btn-xs btn-open-edit-type" data-id="${primaryKey}">Choose Type</button>
-          </div>
-        </div>
-      `;
+      appTypeHtml = `<span class="app-type-unset">Applicant type not set</span>`;
     }
 
     let needsAttentionHtml = "";
@@ -1228,21 +1211,71 @@ function renderTable() {
       </td>
       <td>${needsAttentionHtml}</td>
       <td style="text-align:right;">
-        <button class="btn btn-primary btn-sm btn-review-row" data-id="${primaryKey}">Review</button>
+        <div class="row-action-group">
+          <button class="btn btn-primary btn-sm btn-review-row" data-id="${primaryKey}">Review</button>
+          <button class="btn-more-options btn-row-options" data-id="${primaryKey}" title="Enterprise options" aria-label="Enterprise options">⋯</button>
+        </div>
       </td>
     `;
 
     tr.addEventListener("click", (e) => {
-      const btnEditType = e.target.closest(".btn-open-edit-type");
-      if (btnEditType) {
+      const btnOptions = e.target.closest(".btn-row-options");
+      if (btnOptions) {
         e.stopPropagation();
-        openChangeAppTypeModal(btnEditType.dataset.id);
+        toggleRowDropdownMenu(btnOptions, primaryKey, p.name);
         return;
       }
       openDrawer(primaryKey);
     });
     tbody.appendChild(tr);
   });
+}
+
+function toggleRowDropdownMenu(btn, primaryKey, name) {
+  document.querySelectorAll(".row-dropdown-menu").forEach(m => m.remove());
+
+  const menu = document.createElement("div");
+  menu.className = "row-dropdown-menu";
+  menu.innerHTML = `
+    <button class="btn-menu-change-type">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+      Change applicant type
+    </button>
+    <button class="btn-menu-remove-ent" style="color:#f87171;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Remove from tracker
+    </button>
+  `;
+
+  menu.querySelector(".btn-menu-change-type").addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.remove();
+    openChangeAppTypeModal(primaryKey);
+  });
+
+  menu.querySelector(".btn-menu-remove-ent").addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.remove();
+    const p = state.participants.find(x => (x.enterpriseFolderId === primaryKey || x.driveFolderId === primaryKey || x.id === primaryKey));
+    if (p) {
+      state.pendingRemovalEnterprise = p;
+      const elTitle = document.getElementById("remove-modal-ent-title");
+      if (elTitle) elTitle.textContent = p.name;
+      const elName = document.getElementById("remove-modal-ent-name");
+      if (elName) elName.textContent = p.name;
+      document.getElementById("modal-confirm-remove-overlay").classList.remove("hidden");
+    }
+  });
+
+  btn.parentElement.appendChild(menu);
+
+  const closeMenuHandler = (e) => {
+    if (!menu.contains(e.target) && e.target !== btn) {
+      menu.remove();
+      document.removeEventListener("click", closeMenuHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener("click", closeMenuHandler), 10);
 }
 
 function renderDocStatusBadge(status) {

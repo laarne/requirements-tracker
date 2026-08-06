@@ -856,6 +856,90 @@ body.drawer-open {
   background-color: var(--bg-surface-hover);
 }
 
+/* Unobtrusive Three-Dot Overflow Button & Menu */
+.btn-more-options {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-more-options:hover {
+  background: var(--bg-surface-hover);
+  color: #a5b4fc;
+  border-color: var(--border-color);
+}
+
+.row-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.row-dropdown-menu {
+  position: absolute;
+  right: 14px;
+  margin-top: 4px;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  min-width: 190px;
+  padding: 4px 0;
+}
+
+.row-dropdown-menu button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #f8fafc;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease;
+}
+
+.row-dropdown-menu button:hover {
+  background-color: #334155;
+  color: #a5b4fc;
+}
+
+/* Clean Neutral Applicant Type Badges */
+.app-type-badge-group {
+  background: #1e3a8a;
+  color: #93c5fd;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.725rem;
+}
+
+.app-type-badge-indiv {
+  background: #1f2937;
+  color: #cbd5e1;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.725rem;
+}
+
+.app-type-unset {
+  color: #94a3b8;
+  font-size: 0.775rem;
+  font-weight: 500;
+}
+
 .participant-name-cell {
   display: flex;
   flex-direction: column;
