@@ -1372,15 +1372,26 @@ function openDrawer(participantId) {
   // Applicant Type Selector Widget if CHECK
   if (rawType === "CHECK") {
     const typeWidget = document.createElement("div");
-    typeWidget.style.cssText = "margin-bottom:16px; background:#1e1b4b; padding:12px 14px; border-radius:6px; border:1px solid #4338ca;";
+    typeWidget.style.cssText = "margin-bottom:16px; background:#1e1b4b; padding:14px; border-radius:6px; border:1px solid #6366f1;";
     typeWidget.innerHTML = `
-      <div style="color:#a5b4fc; font-weight:700; font-size:0.85rem; margin-bottom:8px;">⚠ Applicant type needs checking before final compliance evaluation:</div>
-      <button class="btn btn-primary btn-sm btn-drawer-choose-type" data-id="${primaryFolderId}">Choose Applicant Type →</button>
+      <div style="color:#a5b4fc; font-weight:700; font-size:0.875rem; margin-bottom:4px;">⚠ Applicant type not set</div>
+      <div style="color:#cbd5e1; font-size:0.775rem; margin-bottom:12px;">Select applicant classification to apply the correct requirement checklist:</div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-secondary btn-sm btn-select-drawer-indiv" style="flex:1; border-color:#475569; color:#f8fafc;">
+          👤 Set as Individual
+        </button>
+        <button class="btn btn-primary btn-sm btn-select-drawer-group" style="flex:1; background:#3b82f6; border-color:#2563eb;">
+          👥 Set as Group
+        </button>
+      </div>
     `;
-    typeWidget.querySelector(".btn-drawer-choose-type").addEventListener("click", (e) => {
+    typeWidget.querySelector(".btn-select-drawer-indiv").addEventListener("click", (e) => {
       e.stopPropagation();
-      e.preventDefault();
-      openChangeAppTypeModal(primaryFolderId);
+      setApplicantTypeOverride(primaryFolderId, "INDIVIDUAL");
+    });
+    typeWidget.querySelector(".btn-select-drawer-group").addEventListener("click", (e) => {
+      e.stopPropagation();
+      setApplicantTypeOverride(primaryFolderId, "GROUP");
     });
     reviewRequiredList.appendChild(typeWidget);
   }
