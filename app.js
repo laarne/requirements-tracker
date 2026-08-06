@@ -1154,7 +1154,7 @@ function renderTable() {
   }
   emptyState.classList.add("hidden");
 
-  state.filteredParticipants.forEach(p => {
+  state.filteredParticipants.forEach((p, idx) => {
     const tr = document.createElement("tr");
     const primaryKey = p.enterpriseFolderId || p.driveFolderId || p.id;
     tr.dataset.id = primaryKey;
@@ -1179,6 +1179,7 @@ function renderTable() {
     }
 
     tr.innerHTML = `
+      <td style="color:#64748b; font-size:0.8rem; font-weight:600; text-align:center;">${idx + 1}</td>
       <td>
         <div class="participant-name-cell">
           <strong style="color:#f8fafc; font-size:0.925rem;">${escapeHtml(p.name)}</strong>
