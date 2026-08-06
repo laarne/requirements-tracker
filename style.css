@@ -345,7 +345,7 @@ body {
    -------------------------------------------------------------------------- */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
@@ -634,19 +634,32 @@ body.drawer-open {
    -------------------------------------------------------------------------- */
 .insights-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .analytics-bars {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px 16px;
+  gap: 6px 14px;
+}
+
+@media (max-width: 768px) {
+  .analytics-bars {
+    grid-template-columns: 1fr;
+  }
 }
 
 .analytics-row {
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: var(--radius-sm);
   transition: background-color 0.15s ease;
 }
@@ -659,7 +672,7 @@ body.drawer-open {
   display: flex;
   justify-content: space-between;
   font-size: 0.775rem;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .analytics-name {
@@ -680,9 +693,7 @@ body.drawer-open {
 .action-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  height: 100%;
-  justify-content: space-between;
+  gap: 10px;
 }
 
 .action-stat {

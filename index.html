@@ -76,7 +76,7 @@
   <!-- Main Container -->
   <main class="main-layout">
 
-    <!-- KPI Summary Cards Row -->
+    <!-- KPI Summary Cards Row (3 Clean Cards) -->
     <section class="kpi-grid">
       <div class="kpi-card interactive" data-filter="all" id="kpi-total">
         <div class="kpi-label">TOTAL ENTERPRISES</div>
@@ -98,58 +98,9 @@
         <div class="kpi-value color-warning" id="val-needs-review">0</div>
         <div class="kpi-sub">Enterprises requiring verification</div>
       </div>
-
-      <div class="kpi-card interactive" data-filter="incomplete" id="kpi-incomplete">
-        <div class="kpi-label">REQUIRES ACTION</div>
-        <div class="kpi-value color-danger" id="val-incomplete">0</div>
-        <div class="kpi-sub">Enterprises with incomplete requirements</div>
-      </div>
     </section>
 
-    <!-- Priority Work Queue Section -->
-    <section class="priority-work-section card">
-      <div class="priority-work-header">
-        <div>
-          <h2 class="section-heading">PRIORITY WORK</h2>
-          <p class="section-subhead" id="priority-work-subhead">19 enterprises require action</p>
-        </div>
-        <div class="priority-tags-group">
-          <button class="priority-chip chip-all active" id="chip-all" data-filter="all">All</button>
-          <button class="priority-chip chip-review" id="chip-review" data-filter="needs_review">
-            🟠 <span class="chip-count" id="priority-cnt-review">0</span> Needs Review
-          </button>
-          <button class="priority-chip chip-action" id="chip-action" data-filter="incomplete">
-            🔴 <span class="chip-count" id="priority-cnt-action">0</span> Missing Requirements
-          </button>
-          <button class="priority-chip chip-high" id="chip-high" data-filter="priority_high">
-            🟡 <span class="chip-count" id="priority-cnt-high">0</span> High Priority
-          </button>
-          <button class="priority-chip chip-complete" id="chip-complete" data-filter="complete">
-            🟢 <span class="chip-count" id="priority-cnt-complete">0</span> Fully Compliant
-          </button>
-        </div>
-      </div>
-
-      <div class="priority-table-container">
-        <table class="priority-table">
-          <thead>
-            <tr>
-              <th>ENTERPRISE</th>
-              <th>TYPE</th>
-              <th>COMPLIANCE</th>
-              <th>OUTSTANDING</th>
-              <th>STATUS</th>
-              <th style="text-align:right;">ACTION</th>
-            </tr>
-          </thead>
-          <tbody id="priority-table-body">
-            <!-- Rendered dynamically -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Insights Grid: Top Issues & Program Requirements Breakdown -->
+    <!-- Insights Grid: Top Issues & Program Requirements Breakdown (Side-by-Side) -->
     <section class="insights-grid">
       
       <!-- Top Issues Panel -->
@@ -163,7 +114,7 @@
           <ul class="action-list" id="action-issues-list">
             <!-- Rendered dynamically -->
           </ul>
-          <button class="btn btn-warning w-100" id="btn-review-incomplete">Review Missing Requirements →</button>
+          <button class="btn btn-warning w-100" id="btn-review-incomplete" style="margin-top:auto;">Review Missing Requirements →</button>
         </div>
       </div>
 

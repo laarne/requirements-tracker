@@ -764,7 +764,6 @@ function applyFiltersAndRender() {
   }
 
   renderKPICards();
-  renderPriorityWorkQueue();
   renderAnalyticsBars();
   renderActionCenter();
   renderTable();
@@ -787,90 +786,25 @@ function resetAllFilters() {
 function renderKPICards() {
   const total = state.participants.length;
   const complete = state.participants.filter(p => p.status === "COMPLETE").length;
-  const needsReview = state.participants.filter(p => p.reviewCount > 0 || p.status === "NEEDS_REVIEW").length;
-  const incomplete = state.participants.filter(p => p.completionRate < 100).length;
+  const needsReview = state.participants.filter(p => p.checkCount > 0 || p.reviewCount > 0 || p.status === "NEEDS_REVIEW" || p.status === "CHECK").length;
   const totalSlotsAll = state.participants.reduce((acc, p) => acc + (p.applicableRequirementsCount || 11), 0);
   const completedSlotsAll = state.participants.reduce((acc, p) => acc + (p.completeCount || 0), 0);
   const avgComp = totalSlotsAll > 0 ? Math.round((completedSlotsAll / totalSlotsAll) * 1000) / 10 : 0;
 
-  document.getElementById("val-total-participants").textContent = total;
-  document.getElementById("val-needs-review").textContent = needsReview;
-  document.getElementById("val-incomplete").textContent = incomplete;
-  document.getElementById("val-compliance-rate").textContent = `${avgComp}%`;
-  document.getElementById("fill-overall-compliance").style.width = `${avgComp}%`;
+  const elTotal = document.getElementById("val-total-participants");
+  if (elTotal) elTotal.textContent = total;
+
+  const elReview = document.getElementById("val-needs-review");
+  if (elReview) elReview.textContent = needsReview;
+
+  const elRate = document.getElementById("val-compliance-rate");
+  if (elRate) elRate.textContent = `${avgComp}%`;
+
+  const elFill = document.getElementById("fill-overall-compliance");
+  if (elFill) elFill.style.width = `${avgComp}%`;
 
   document.querySelectorAll(".kpi-card.interactive").forEach(card => {
     card.classList.toggle("active", card.dataset.filter === state.activeFilterStatus);
-  });
-}
-
-function renderPriorityWorkQueue() {
-  const total = state.participants.length;
-  const complete = state.participants.filter(p => p.status === "COMPLETE").length;
-  const needsReview = state.participants.filter(p => p.reviewCount > 0).length;
-  const highPriority = state.participants.filter(p => p.priority === "HIGH").length;
-  const requiringAction = total - complete;
-
-  const subhead = document.getElementById("priority-work-subhead");
-  if (subhead) subhead.textContent = `${requiringAction} enterprises require action`;
-
-  const elAction = document.getElementById("priority-cnt-action");
-  if (elAction) elAction.textContent = requiringAction;
-  const elReview = document.getElementById("priority-cnt-review");
-  if (elReview) elReview.textContent = needsReview;
-  const elHigh = document.getElementById("priority-cnt-high");
-  if (elHigh) elHigh.textContent = highPriority;
-  const elComplete = document.getElementById("priority-cnt-complete");
-  if (elComplete) elComplete.textContent = complete;
-
-  document.querySelectorAll(".priority-chip").forEach(chip => {
-    chip.classList.toggle("active", chip.dataset.filter === state.activeFilterStatus);
-  });
-
-  const tbody = document.getElementById("priority-table-body");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  const priorityList = [...state.filteredParticipants].slice(0, 6);
-
-  if (priorityList.length === 0) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">No priority enterprises found matching active filter criteria.</td>`;
-    tbody.appendChild(tr);
-    return;
-  }
-
-  priorityList.forEach(p => {
-    const tr = document.createElement("tr");
-    const primaryKey = p.enterpriseFolderId || p.driveFolderId || p.id;
-    tr.dataset.id = primaryKey;
-
-    let statusBadgeHtml = `<span class="badge badge-missing">Action Required</span>`;
-    if (p.status === "COMPLETE") statusBadgeHtml = `<span class="badge badge-approved">Fully Compliant</span>`;
-    else if (p.reviewCount > 0) statusBadgeHtml = `<span class="badge badge-review">Needs Review</span>`;
-
-    const outstandingText = p.status === "COMPLETE" ? "0 missing" : `${p.missingCount} missing${p.reviewCount > 0 ? ` · ${p.reviewCount} review` : ''}`;
-
-    tr.innerHTML = `
-      <td><strong style="color:#f8fafc;">${escapeHtml(p.name)}</strong></td>
-      <td><span class="badge" style="background:#1f2937; color:#d1d5db;">${(p.applicantType || 'INDIVIDUAL').toUpperCase()}</span></td>
-      <td>
-        <div style="display:flex; align-items:center; gap:8px; width:130px;">
-          <span style="font-weight:700; font-size:0.75rem; width:40px;">${p.completionRate}%</span>
-          <div class="progress-bar-bg" style="flex:1; height:6px;">
-            <div class="progress-bar-fill" style="width:${p.completionRate}%;"></div>
-          </div>
-        </div>
-      </td>
-      <td><span style="font-size:0.75rem; font-weight:600; color:${p.missingCount > 0 ? '#f87171' : '#34d399'};">${outstandingText}</span></td>
-      <td>${statusBadgeHtml}</td>
-      <td style="text-align:right;">
-        <button class="btn btn-primary btn-sm btn-review-priority" data-id="${primaryKey}">Review →</button>
-      </td>
-    `;
-
-    tr.addEventListener("click", () => openDrawer(primaryKey));
-    tbody.appendChild(tr);
   });
 }
 
