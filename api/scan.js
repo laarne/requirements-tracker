@@ -531,6 +531,42 @@ function validateScanIntegrity(participants, scanResults) {
   return { valid: true };
 }
 
+function sanitizePrivateKey(key) {
+  if (!key || typeof key !== 'string') return null;
+  let cleanKey = key.trim();
+
+  // Strip wrapping outer quotes if present (e.g. '"-----BEGIN..."' or "'-----BEGIN...'")
+  if ((cleanKey.startsWith('"') && cleanKey.endsWith('"')) || (cleanKey.startsWith("'") && cleanKey.endsWith("'"))) {
+    cleanKey = cleanKey.slice(1, -1).trim();
+  }
+
+  // Convert literal \\n or \n escape sequences to actual newline characters
+  cleanKey = cleanKey.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+
+  return cleanKey;
+}
+
+function validatePrivateKeyFormat(privateKey) {
+  if (!privateKey) {
+    return { valid: false, reason: "Private key string is null or empty." };
+  }
+
+  const hasBegin = privateKey.includes("-----BEGIN PRIVATE KEY-----") || privateKey.includes("-----BEGIN RSA PRIVATE KEY-----");
+  const hasEnd = privateKey.includes("-----END PRIVATE KEY-----") || privateKey.includes("-----END RSA PRIVATE KEY-----");
+
+  if (!hasBegin || !hasEnd) {
+    return { valid: false, reason: `Private key missing PEM headers (BEGIN: ${hasBegin}, END: ${hasEnd}).` };
+  }
+
+  try {
+    const crypto = require('crypto');
+    const keyObj = crypto.createPrivateKey(privateKey);
+    return { valid: true, type: keyObj.type, asymmetricKeyType: keyObj.asymmetricKeyType, reason: "PrivateKey parsed successfully by Node.js crypto engine." };
+  } catch (err) {
+    return { valid: false, reason: `Node.js crypto.createPrivateKey failed: ${err.message}` };
+  }
+}
+
 function analyzeKeyStatus(rawKey) {
   if (rawKey === undefined) return "MISSING";
   if (rawKey === null || (typeof rawKey === 'string' && rawKey.trim().length === 0)) return "EMPTY";
@@ -1029,3 +1065,10 @@ function processFilesForRequirements(files, applicantType) {
 
   return reqs;
 }
+
+module.exports.sanitizePrivateKey = sanitizePrivateKey;
+module.exports.validatePrivateKeyFormat = validatePrivateKeyFormat;
+module.exports.analyzeCredentials = analyzeCredentials;
+module.exports.getGoogleDriveService = getGoogleDriveService;
+module.exports.classifyGoogleError = classifyGoogleError;
+
