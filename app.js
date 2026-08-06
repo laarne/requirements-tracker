@@ -752,19 +752,24 @@ function processDataset(raw, dataJsonCount = 0, scanResultsCount = 0) {
         if (docKey.startsWith("_")) return;
         if (copy.requirements[docKey]) {
           const override = activeOverrides[docKey];
+          // CORE PERSISTENCE RULE:
+          // The EXISTENCE of a human review record gives it authority over the automated scan.
+          // Do NOT rely solely on verificationSource — the presence of the override object is what matters.
+          // finalStatus = humanReview.exists ? humanReview.status : automatedDriveStatus
           copy.requirements[docKey].review = override;
-          if (override.manualStatus) {
+          if (override && override.manualStatus && override.manualStatus.trim() !== '') {
             // Human decision ALWAYS wins over Drive scan result.
-            // This is the core persistence guarantee: a rescan writes to scan_results
-            // but never touches human_reviews, so this override always survives.
-            let st = override.manualStatus;
+            // A rescan writes to scan_results ONLY — human_reviews is never touched by the scanner.
+            let st = override.manualStatus.trim().toUpperCase();
             if (st === "NEEDS_REVIEW" || st === "REVIEW") st = "CHECK";
             copy.requirements[docKey].status = st;
             copy.requirements[docKey].finalStatus = st;
-            copy.requirements[docKey].verificationSource = override.verificationSource || 'manual';
+            copy.requirements[docKey].verificationSource = 'manual';
             copy.requirements[docKey].reviewedBy = override.reviewedBy || '';
             copy.requirements[docKey].reviewedAt = override.reviewedAt || '';
           }
+          // If override exists but manualStatus is empty/null, keep Drive scan result
+          // but still record that a review object exists for audit purposes
         }
       });
     } else {
@@ -1840,11 +1845,19 @@ async function setDocOverride(participantId, docKey, humanStatus, note = "", tar
     p.memberDetails[targetMember][docKey].review = reviewPayload;
   }
 
+  // Update in-memory document object immediately (before fetchData re-runs).
+  // This ensures the drawer re-render after Mark Complete / Keep Missing shows
+  // the correct source label ("Manually verified" / "Human decision") right away,
+  // not just after the next full page reload.
   doc.review = reviewPayload;
   if (!targetMember) {
     doc.status = humanStatus;
+    doc.finalStatus = humanStatus;         // explicit finalStatus update
+    doc.verificationSource = 'manual';     // source of truth
+    doc.reviewedBy = reviewerName;         // for UI display
+    doc.reviewedAt = reviewPayload.reviewedAt; // for UI display
   }
-  
+
   recalculateEnterpriseScores(p);
 
   applyFiltersAndRender();
