@@ -170,29 +170,45 @@ module.exports = async (req, res) => {
       const { data: existingScanData } = await supabase.from('scan_results').select('enterprise_folder_id, enterprise_id');
       const existingFolderIds = new Set((existingScanData || []).map(r => r.enterprise_folder_id || r.enterprise_id));
 
-      for (const [folderId, folder] of folderMap.entries()) {
-        const entId = deriveEnterpriseId(folder.name);
-        if (!existingFolderIds.has(folderId) && !existingFolderIds.has(entId)) {
-          newEnterprisesCount++;
-        }
+      const folderEntries = Array.from(folderMap.entries());
+      const BATCH_SIZE = 5;
 
-        const files = await listFilesInFolder(driveService, folderId);
-        filesFound += files.length;
-        filesProcessed += files.length;
+      for (let i = 0; i < folderEntries.length; i += BATCH_SIZE) {
+        const batch = folderEntries.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async ([folderId, folder]) => {
+          const entId = deriveEnterpriseId(folder.name);
+          const isNew = !existingFolderIds.has(folderId) && !existingFolderIds.has(entId);
+          if (isNew) newEnterprisesCount++;
 
-        const applicantType = determineApplicantType(folder.name, files);
-        const reqs = processFilesForRequirements(files, applicantType);
+          console.log(`[FOLDER_DIAG] PROCESSING: name="${folder.name}" id="${folderId}" entId="${entId}" isNew=${isNew}`);
 
-        scannedParticipants.push({
-          enterpriseFolderId: folderId,
-          id: entId,
-          name: folder.name,
-          applicantType: applicantType,
-          driveUrl: folder.webViewLink || `https://drive.google.com/drive/folders/${folderId}`,
-          driveFolderId: folderId,
-          requirements: reqs
-        });
+          const files = await listFilesInFolder(driveService, folderId);
+          filesFound += files.length;
+          filesProcessed += files.length;
+
+          console.log(`[FOLDER_DIAG]   Files in folder: ${files.length}`);
+          files.forEach(f => {
+            console.log(`[FOLDER_DIAG]     File: "${f.name}" mimeType="${f.mimeType}" size="${f.size}" id="${f.id}"`);
+          });
+
+          const applicantType = determineApplicantType(folder.name, files);
+          const reqs = processFilesForRequirements(files, applicantType);
+
+          console.log(`[FOLDER_DIAG]   applicantType=${applicantType}`);
+
+          scannedParticipants.push({
+            enterpriseFolderId: folderId,
+            id: entId,
+            name: folder.name,
+            applicantType: applicantType,
+            driveUrl: folder.webViewLink || `https://drive.google.com/drive/folders/${folderId}`,
+            driveFolderId: folderId,
+            requirements: reqs
+          });
+        }));
       }
+
+      console.log(`[FOLDER_DIAG] SCAN COMPLETE: ${scannedParticipants.length} enterprises processed from ${folderMap.size} unique folders (from ${gdriveFolders.length} raw API results)`);
     }
 
     // CRITICAL: If Google Drive is unavailable or returned 0 folders, FAIL EXPLICITLY
@@ -408,16 +424,18 @@ module.exports = async (req, res) => {
   } catch (err) {
     console.error("Cloud scan failed:", err);
 
-    try {
-      await supabase
-        .from('scan_jobs')
-        .update({
-          status: 'FAILED',
-          completed_at: new Date().toISOString(),
-          error_message: err.message || "Cloud scan error occurred."
-        })
-        .eq('id', job.id);
-    } catch (e) {}
+    if (job && job.id) {
+      try {
+        await supabase
+          .from('scan_jobs')
+          .update({
+            status: 'FAILED',
+            completed_at: new Date().toISOString(),
+            error_message: err.message || "Cloud scan error occurred."
+          })
+          .eq('id', job.id);
+      } catch (e) {}
+    }
 
     return res.status(200).json({
       success: false,
@@ -455,15 +473,26 @@ function getGoogleDriveService() {
 async function listChildFolders(drive, rootFolderId) {
   let folders = [];
   let pageToken = null;
+  let pageNum = 0;
+
+  console.log(`[FOLDER_DIAG] listChildFolders called: rootFolderId=${rootFolderId}`);
 
   do {
+    pageNum++;
     const res = await drive.files.list({
       q: `'${rootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-      fields: 'nextPageToken, files(id, name, webViewLink, createdTime)',
+      fields: 'nextPageToken, files(id, name, webViewLink, createdTime, mimeType)',
       pageSize: 100,
       pageToken: pageToken,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true
+    });
+
+    const pageFiles = (res.data && res.data.files) ? res.data.files : [];
+    console.log(`[FOLDER_DIAG] Page ${pageNum}: returned ${pageFiles.length} folders, nextPageToken=${res.data.nextPageToken ? 'exists' : 'null'}`);
+
+    pageFiles.forEach((f, i) => {
+      console.log(`[FOLDER_DIAG]   Folder #${folders.length + i + 1}: name="${f.name}" id="${f.id}" mimeType="${f.mimeType}" createdTime="${f.createdTime}"`);
     });
 
     if (res.data && res.data.files) {
@@ -471,6 +500,12 @@ async function listChildFolders(drive, rootFolderId) {
     }
     pageToken = res.data.nextPageToken;
   } while (pageToken);
+
+  console.log(`[FOLDER_DIAG] Total folders returned by Google Drive API: ${folders.length}`);
+
+  // Log all returned folder IDs for easy comparison
+  const idList = folders.map(f => `"${f.name}" -> ${f.id}`).join('\n');
+  console.log(`[FOLDER_DIAG] All returned folders:\n${idList}`);
 
   return folders;
 }

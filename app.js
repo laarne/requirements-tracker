@@ -1093,6 +1093,16 @@ async function triggerCloudDriveScan() {
       headers: { "Content-Type": "application/json" }
     });
 
+    if (!res.ok) {
+      const errText = await res.text();
+      let errJson = null;
+      try { errJson = JSON.parse(errText); } catch (e) {}
+      const errMsg = (errJson && errJson.error) ? errJson.error : `HTTP ${res.status}: ${res.statusText || 'Server error'}`;
+      showToast(`Scan Error: ${errMsg}`, "error");
+      resetScanUI(`Scan error (${res.status})`);
+      return;
+    }
+
     const data = await res.json();
 
     if (!data.success && data.error && !data.jobId) {
