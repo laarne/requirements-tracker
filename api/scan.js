@@ -145,17 +145,18 @@ module.exports = async (req, res) => {
       .from('scan_jobs')
       .insert({
         status: 'RUNNING',
-        request_id: reqId,
-        stage: currentStage,
         started_at: new Date().toISOString()
       })
       .select()
       .single();
 
-    if (jobErr) console.warn("[SCAN] Job record creation warning:", jobErr.message);
+    if (jobErr) console.warn("[SCAN] Job record creation warning:", jobErr.message, jobErr);
     if (jobData) {
       job = jobData;
       jobId = jobData.id;
+      console.log(`[SCAN] [${jobId}] Job record created.`);
+    } else {
+      console.warn(`[SCAN] Job record NOT created. Continuing with temp ID: ${jobId}`);
     }
 
     // 4. Connect to Google Drive API
@@ -195,7 +196,7 @@ module.exports = async (req, res) => {
         try {
           await supabase
             .from('scan_jobs')
-            .update({ status: 'FAILED', completed_at: new Date().toISOString(), error_code: errInfo.code, error_message: errInfo.message })
+            .update({ status: 'FAILED', completed_at: new Date().toISOString(), error_message: errInfo.message })
             .eq('id', job.id);
         } catch (e) {}
       }
@@ -236,7 +237,7 @@ module.exports = async (req, res) => {
         try {
           await supabase
             .from('scan_jobs')
-            .update({ status: 'FAILED', completed_at: new Date().toISOString(), error_code: errInfo.code, error_message: errInfo.message })
+            .update({ status: 'FAILED', completed_at: new Date().toISOString(), error_message: errInfo.message })
             .eq('id', job.id);
         } catch (e) {}
       }
@@ -372,25 +373,30 @@ module.exports = async (req, res) => {
         p_results_saved: scanResultsToUpsert.length
       });
 
-      if (!rpcErr && rpcRes && rpcRes.success) {
+      if (rpcErr) {
+        console.warn(`[SCAN] [${jobId}] RPC commit_scan_snapshot returned error (function may not exist):`, rpcErr.message || JSON.stringify(rpcErr));
+      } else if (rpcRes && rpcRes.success) {
         rpcCommitted = true;
         resultsSaved = scanResultsToUpsert.length;
         console.log(`[SCAN] [${jobId}] PostgreSQL RPC commit_scan_snapshot executed successfully.`);
       }
     } catch (e) {
-      console.warn("[SCAN] PostgreSQL RPC not available or failed, falling back to single-statement array upsert:", e.message);
+      console.warn(`[SCAN] [${jobId}] PostgreSQL RPC threw exception (function may not exist):`, e.message);
     }
 
     // Fallback: Single-statement PostgreSQL array upsert (inherently 100% atomic in PostgreSQL)
     if (!rpcCommitted && scanResultsToUpsert.length > 0) {
-      const { error: upsertErr } = await supabase
+      console.log(`[SCAN] [${jobId}] RPC not committed. Attempting direct upsert of ${scanResultsToUpsert.length} rows to scan_results...`);
+      const { data: upsertData, error: upsertErr } = await supabase
         .from('scan_results')
         .upsert(scanResultsToUpsert, { onConflict: 'enterprise_folder_id,requirement_id' });
 
       if (upsertErr) {
-        throw new Error(`Supabase database commit error: ${upsertErr.message}`);
+        console.error(`[SCAN ERROR] [${jobId}] Direct upsert FAILED:`, JSON.stringify(upsertErr));
+        throw new Error(`Supabase upsert failed: ${upsertErr.message} (code: ${upsertErr.code || 'N/A'}, details: ${upsertErr.details || 'N/A'})`);
       }
       resultsSaved = scanResultsToUpsert.length;
+      console.log(`[SCAN] [${jobId}] Direct upsert succeeded: ${resultsSaved} rows saved.`);
     }
 
     currentStage = 'COMPLETED';
@@ -444,7 +450,6 @@ module.exports = async (req, res) => {
           .update({
             status: 'FAILED',
             completed_at: new Date().toISOString(),
-            error_code: errInfo.code,
             error_message: `Stage: ${currentStage} - ${errInfo.message}`
           })
           .eq('id', job.id);
@@ -486,7 +491,7 @@ function classifyGoogleError(err) {
     return { code: "DATA_VALIDATION_ERROR", transient: false, message: msg };
   }
   if (msg.includes("commit") || msg.includes("database")) {
-    return { code: "DATABASE_COMMIT_ERROR", transient: false, message: "Supabase database commit transaction failed." };
+    return { code: "DATABASE_COMMIT_ERROR", transient: false, message: msg };
   }
   return { code: "UNKNOWN_ERROR", transient: false, message: msg || "Cloud scan error occurred." };
 }
