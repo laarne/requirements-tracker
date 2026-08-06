@@ -464,8 +464,8 @@ module.exports = async (req, res) => {
 
 function classifyGoogleError(err) {
   const msg = (err && err.message) ? err.message : "";
-  if (msg.includes("credentials") || msg.includes("GOOGLE_SERVICE_ACCOUNT")) {
-    return { code: "AUTHENTICATION_FAILURE", transient: false, message: "Google Drive API authentication credentials missing or invalid." };
+  if (msg.includes("credentials") || msg.includes("GOOGLE_SERVICE_ACCOUNT") || msg.includes("DECODER") || msg.includes("crypto") || msg.includes("formatting error")) {
+    return { code: "AUTHENTICATION_FAILURE", transient: false, message: `Google Drive authentication error: ${msg}` };
   }
   if (msg.includes("403") || msg.includes("permission") || msg.includes("access")) {
     return { code: "AUTHORIZATION_FAILURE", transient: false, message: "Access denied to configured Google Drive master folder." };
@@ -531,17 +531,88 @@ function validateScanIntegrity(participants, scanResults) {
   return { valid: true };
 }
 
+function sanitizePrivateKey(key) {
+  if (!key || typeof key !== 'string') return null;
+  let cleanKey = key.trim();
+
+  // Strip wrapping outer quotes if present (e.g. '"-----BEGIN..."' or "'-----BEGIN...'")
+  if ((cleanKey.startsWith('"') && cleanKey.endsWith('"')) || (cleanKey.startsWith("'") && cleanKey.endsWith("'"))) {
+    cleanKey = cleanKey.slice(1, -1).trim();
+  }
+
+  // Convert literal \\n or \n escape sequences to actual newline characters
+  cleanKey = cleanKey.replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+
+  return cleanKey;
+}
+
+function validatePrivateKeyFormat(privateKey) {
+  if (!privateKey) {
+    return { valid: false, reason: "Private key string is null or empty." };
+  }
+
+  const hasBegin = privateKey.includes("-----BEGIN PRIVATE KEY-----") || privateKey.includes("-----BEGIN RSA PRIVATE KEY-----");
+  const hasEnd = privateKey.includes("-----END PRIVATE KEY-----") || privateKey.includes("-----END RSA PRIVATE KEY-----");
+
+  if (!hasBegin || !hasEnd) {
+    return { valid: false, reason: `Private key missing PEM headers (BEGIN: ${hasBegin}, END: ${hasEnd}).` };
+  }
+
+  try {
+    const crypto = require('crypto');
+    const keyObj = crypto.createPrivateKey(privateKey);
+    return { valid: true, type: keyObj.type, asymmetricKeyType: keyObj.asymmetricKeyType, reason: "PrivateKey parsed successfully by Node.js crypto engine." };
+  } catch (err) {
+    return { valid: false, reason: `Node.js crypto.createPrivateKey failed: ${err.message}` };
+  }
+}
+
 function getGoogleDriveService() {
   const serviceAccountEnv = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  const clientEmailEnv = process.env.GOOGLE_CLIENT_EMAIL || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const privateKeyEnv = process.env.GOOGLE_PRIVATE_KEY || process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
   const apiKey = process.env.GOOGLE_DRIVE_API_KEY || process.env.GOOGLE_API_KEY;
 
+  let serviceAccountJson = null;
+  let authSource = "NONE";
+
+  // Strategy A: GOOGLE_SERVICE_ACCOUNT_JSON
   if (serviceAccountEnv) {
-    let serviceAccountJson = null;
+    authSource = "GOOGLE_SERVICE_ACCOUNT_JSON";
     try {
       serviceAccountJson = JSON.parse(serviceAccountEnv);
     } catch (e) {
-      const decoded = Buffer.from(serviceAccountEnv, 'base64').toString('utf8');
-      serviceAccountJson = JSON.parse(decoded);
+      try {
+        const decoded = Buffer.from(serviceAccountEnv, 'base64').toString('utf8');
+        serviceAccountJson = JSON.parse(decoded);
+        authSource = "GOOGLE_SERVICE_ACCOUNT_JSON_BASE64";
+      } catch (b64Err) {
+        console.warn("[SCAN AUTH DIAGNOSTIC] Failed parsing GOOGLE_SERVICE_ACCOUNT_JSON (raw & base64):", e.message);
+      }
+    }
+  }
+
+  // Strategy B: Separate env vars (GOOGLE_CLIENT_EMAIL + GOOGLE_PRIVATE_KEY)
+  if (!serviceAccountJson && clientEmailEnv && privateKeyEnv) {
+    authSource = "GOOGLE_CLIENT_EMAIL_AND_PRIVATE_KEY";
+    serviceAccountJson = {
+      client_email: clientEmailEnv.trim(),
+      private_key: privateKeyEnv
+    };
+  }
+
+  if (serviceAccountJson) {
+    if (serviceAccountJson.private_key) {
+      serviceAccountJson.private_key = sanitizePrivateKey(serviceAccountJson.private_key);
+    }
+
+    const keyValidation = validatePrivateKeyFormat(serviceAccountJson.private_key);
+    const hasEmail = Boolean(serviceAccountJson.client_email);
+
+    console.log(`[SCAN AUTH DIAGNOSTIC] Source: ${authSource} | Client Email: ${hasEmail ? 'PRESENT' : 'MISSING'} | Key Length: ${serviceAccountJson.private_key ? serviceAccountJson.private_key.length : 0} | Crypto Parse: ${keyValidation.valid ? 'OK (' + keyValidation.asymmetricKeyType + ')' : 'FAILED (' + keyValidation.reason + ')'}`);
+
+    if (!keyValidation.valid) {
+      throw new Error(`Service account private key formatting error (${keyValidation.reason}). Verify GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_PRIVATE_KEY formatting in Vercel environment variables.`);
     }
 
     const auth = new google.auth.GoogleAuth({
@@ -550,8 +621,10 @@ function getGoogleDriveService() {
     });
     return google.drive({ version: 'v3', auth });
   } else if (apiKey) {
+    console.log("[SCAN AUTH DIAGNOSTIC] Source: GOOGLE_DRIVE_API_KEY (API Key Mode)");
     return google.drive({ version: 'v3', auth: apiKey });
   }
+
   return null;
 }
 
