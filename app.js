@@ -1225,20 +1225,31 @@ function toggleRowDropdownMenu(btn, primaryKey, name) {
   menu.style.cssText = `position: fixed; top: ${rect.bottom + 4}px; left: ${leftPos}px; z-index: 99999; width: 190px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6); padding: 4px 0;`;
 
   menu.innerHTML = `
-    <button class="btn-menu-change-type" style="width:100%; display:flex; align-items:center; gap:8px; padding:8px 12px; background:none; border:none; color:#f8fafc; font-size:0.8rem; cursor:pointer; text-align:left;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
-      Change applicant type
+    <button class="btn-menu-set-indiv" style="width:100%; display:flex; align-items:center; gap:8px; padding:8px 12px; background:none; border:none; color:#f8fafc; font-size:0.8rem; cursor:pointer; text-align:left;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Set as Individual
     </button>
+    <button class="btn-menu-set-group" style="width:100%; display:flex; align-items:center; gap:8px; padding:8px 12px; background:none; border:none; color:#f8fafc; font-size:0.8rem; cursor:pointer; text-align:left;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-3-3.87"/><path d="M9 21v-2a4 4 0 0 0-4-4H3a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><circle cx="19" cy="11" r="3"/></svg>
+      Set as Group
+    </button>
+    <div style="border-top:1px solid #334155; margin:4px 0;"></div>
     <button class="btn-menu-remove-ent" style="width:100%; display:flex; align-items:center; gap:8px; padding:8px 12px; background:none; border:none; color:#f87171; font-size:0.8rem; cursor:pointer; text-align:left;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       Remove from tracker
     </button>
   `;
 
-  menu.querySelector(".btn-menu-change-type").addEventListener("click", (e) => {
+  menu.querySelector(".btn-menu-set-indiv").addEventListener("click", (e) => {
     e.stopPropagation();
     menu.remove();
-    openChangeAppTypeModal(primaryKey);
+    setApplicantTypeOverride(primaryKey, "INDIVIDUAL");
+  });
+
+  menu.querySelector(".btn-menu-set-group").addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.remove();
+    setApplicantTypeOverride(primaryKey, "GROUP");
   });
 
   menu.querySelector(".btn-menu-remove-ent").addEventListener("click", (e) => {
