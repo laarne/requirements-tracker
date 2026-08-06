@@ -656,10 +656,20 @@ function processFilesForRequirements(files, applicantType) {
       // Layer 2: Keyword matching
       if (!matched) {
         for (const kw of reqDef.keywords) {
-          if (fnNorm.includes(kw.toLowerCase())) {
-            matched = true;
-            matchSource = "FILENAME_KEYWORD";
-            break;
+          const kwNorm = kw.toLowerCase();
+          if (kwNorm.length <= 3) {
+            const pattern = new RegExp(`\\b${kwNorm.replace(/[^a-z0-9]/g, '')}\\b`, 'i');
+            if (pattern.test(fnNorm)) {
+              matched = true;
+              matchSource = "FILENAME_KEYWORD";
+              break;
+            }
+          } else {
+            if (fnNorm.includes(kwNorm)) {
+              matched = true;
+              matchSource = "FILENAME_KEYWORD";
+              break;
+            }
           }
         }
       }
@@ -668,14 +678,14 @@ function processFilesForRequirements(files, applicantType) {
       if (!matched && f.mimeType) {
         const mime = f.mimeType.toLowerCase();
         if (reqKey === "validId" && (mime.includes("image/") || mime === "application/pdf")) {
-          const hasIdHint = /id|passport|license|valid/.test(fnNorm);
+          const hasIdHint = /\b(id|passport|license|valid|philid|umid|voter|postal|prc|driver|philhealth|sss)\b/i.test(fnNorm);
           if (hasIdHint) {
             matched = true;
             matchSource = "MIME_TYPE_HINT";
           }
         }
         if (reqKey === "photo2x2" && mime.startsWith("image/")) {
-          const hasPhotoHint = /photo|picture|headshot|2x2|id/.test(fnNorm);
+          const hasPhotoHint = /\b(photo|picture|headshot|2x2)\b/i.test(fnNorm);
           if (hasPhotoHint) {
             matched = true;
             matchSource = "MIME_TYPE_HINT";
@@ -701,7 +711,12 @@ function processFilesForRequirements(files, applicantType) {
 
     let status = "MISSING";
     if (matchedFiles.length > 0) {
-      if (reqKey === "photo2x2" || reqKey === "signatures" || matchedFiles.length > 1) {
+      const topMatch = matchedFiles[0];
+      if (reqKey === "photo2x2" || reqKey === "signatures") {
+        status = "NEEDS_REVIEW";
+      } else if (reqKey === "validId") {
+        status = topMatch.confidence >= 0.85 ? "COMPLETE" : "NEEDS_REVIEW";
+      } else if (matchedFiles.length > 1) {
         status = "NEEDS_REVIEW";
       } else {
         status = "COMPLETE";

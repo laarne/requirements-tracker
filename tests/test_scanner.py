@@ -661,5 +661,30 @@ class Test19EnterpriseAndRequirementStatusRegression(unittest.TestCase):
         self.assertEqual(not_applicable, 1)
 
 
+class TestClassificationAccuracyRegression(unittest.TestCase):
+    """Regression tests for Certificate of Residency, Philippine Government ID, and Affidavit separation."""
+
+    def setUp(self):
+        self.scanner = DocumentScanner(target_path="./test_participants", mode="local")
+
+    def test_residency_png_matches_proof_of_residency(self):
+        matches, _ = self.scanner.inspect_and_classify_file("residency.png", 250000, mime_type="image/png")
+        req_ids = [m["requirement"] for m in matches]
+        self.assertIn("proofOfResidency", req_ids)
+        self.assertNotIn("validId", req_ids)
+
+    def test_scanned_phil_id_matches_valid_id(self):
+        matches, _ = self.scanner.inspect_and_classify_file("scanned_phil_id_1page.png", 300000, mime_type="image/png")
+        req_ids = [m["requirement"] for m in matches]
+        self.assertIn("validId", req_ids)
+        self.assertNotIn("proofOfResidency", req_ids)
+
+    def test_affidavit_of_new_business_does_not_match_valid_id(self):
+        matches, _ = self.scanner.inspect_and_classify_file("Affidavit_of_New_Business_GrowMate.pdf", 400000, mime_type="application/pdf")
+        req_ids = [m["requirement"] for m in matches]
+        self.assertIn("swornStatement", req_ids)
+        self.assertNotIn("validId", req_ids)
+
+
 if __name__ == "__main__":
     unittest.main()
