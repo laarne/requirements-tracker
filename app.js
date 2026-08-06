@@ -458,6 +458,48 @@ function closeExcludedListModal() {
   if (modal) modal.classList.add("hidden");
 }
 
+function openChangeAppTypeModal(participantId) {
+  const p = state.participants.find(x => (x.enterpriseFolderId === participantId || x.driveFolderId === participantId || x.id === participantId));
+  if (!p) return;
+
+  const primaryFolderId = p.enterpriseFolderId || p.driveFolderId || p.id;
+  state.editingTypeParticipantId = primaryFolderId;
+  state.editingTypeTargetValue = null;
+
+  const currentType = getApplicantTypeString(p.applicantType);
+  const elTitle = document.getElementById("app-type-modal-ent-subtitle");
+  if (elTitle) elTitle.textContent = p.name;
+
+  const elBadge = document.getElementById("app-type-modal-current-badge");
+  if (elBadge) {
+    elBadge.textContent = currentType === "CHECK" ? "Unspecified (Needs Checking)" : currentType;
+    elBadge.style.background = currentType === "GROUP" ? "#1e3a8a" : (currentType === "INDIVIDUAL" ? "#1f2937" : "#b45309");
+    elBadge.style.color = currentType === "GROUP" ? "#93c5fd" : (currentType === "INDIVIDUAL" ? "#d1d5db" : "#fef3c7");
+  }
+
+  const radios = document.querySelectorAll('input[name="modal-app-type-choice"]');
+  radios.forEach(r => {
+    r.checked = (r.value === currentType);
+  });
+
+  const btnContinue = document.getElementById("btn-app-type-continue");
+  if (btnContinue) {
+    const selected = document.querySelector('input[name="modal-app-type-choice"]:checked');
+    btnContinue.disabled = !selected;
+  }
+
+  document.getElementById("app-type-step-select").classList.remove("hidden");
+  document.getElementById("app-type-step-confirm").classList.add("hidden");
+  document.getElementById("modal-change-app-type-overlay").classList.remove("hidden");
+}
+
+function closeChangeAppTypeModal() {
+  const modal = document.getElementById("modal-change-app-type-overlay");
+  if (modal) modal.classList.add("hidden");
+  state.editingTypeParticipantId = null;
+  state.editingTypeTargetValue = null;
+}
+
 async function fetchScanResultsFromSupabase(identityMap) {
   if (!supabaseClient) return null;
   try {
@@ -1136,16 +1178,25 @@ function renderTable() {
     let appTypeHtml = "";
     const rawType = getApplicantTypeString(p.applicantType);
     if (rawType === "GROUP") {
-      appTypeHtml = `<span class="badge" style="background:#1e3a8a; color:#93c5fd; font-weight:700;">GROUP</span>`;
+      appTypeHtml = `
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="badge" style="background:#1e3a8a; color:#93c5fd; font-weight:700;">GROUP</span>
+          <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryKey}">Edit</button>
+        </div>
+      `;
     } else if (rawType === "INDIVIDUAL") {
-      appTypeHtml = `<span class="badge" style="background:#1f2937; color:#d1d5db; font-weight:700;">INDIVIDUAL</span>`;
+      appTypeHtml = `
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="badge" style="background:#1f2937; color:#d1d5db; font-weight:700;">INDIVIDUAL</span>
+          <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryKey}">Edit</button>
+        </div>
+      `;
     } else {
       appTypeHtml = `
         <div style="display:flex; flex-direction:column; gap:4px;">
           <span style="color:#fbbf24; font-size:0.75rem; font-weight:600;">⚠ Applicant type needs checking</span>
-          <div style="display:flex; gap:4px;">
-            <button class="btn btn-secondary btn-xs btn-set-type" data-id="${primaryKey}" data-type="INDIVIDUAL">Individual</button>
-            <button class="btn btn-secondary btn-xs btn-set-type" data-id="${primaryKey}" data-type="GROUP">Group</button>
+          <div>
+            <button class="btn btn-warning btn-xs btn-open-edit-type" data-id="${primaryKey}">Choose Type</button>
           </div>
         </div>
       `;
@@ -1182,10 +1233,10 @@ function renderTable() {
     `;
 
     tr.addEventListener("click", (e) => {
-      if (e.target.classList.contains("btn-set-type")) {
+      const btnEditType = e.target.closest(".btn-open-edit-type");
+      if (btnEditType) {
         e.stopPropagation();
-        const newType = e.target.dataset.type;
-        setApplicantTypeOverride(primaryKey, newType);
+        openChangeAppTypeModal(btnEditType.dataset.id);
         return;
       }
       openDrawer(primaryKey);
@@ -1258,8 +1309,17 @@ function openDrawer(participantId) {
 
   document.getElementById("drawer-participant-name").textContent = p.name;
   const rawType = getApplicantTypeString(p.applicantType);
-  const typeDisplay = rawType === "CHECK" ? `<span style="color:#fbbf24; font-weight:700;">⚠ Applicant type needs checking</span>` : rawType;
+  let typeDisplay = "";
+  if (rawType === "GROUP") {
+    typeDisplay = `GROUP <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryFolderId}">Edit</button>`;
+  } else if (rawType === "INDIVIDUAL") {
+    typeDisplay = `INDIVIDUAL <button class="btn btn-secondary btn-xs btn-open-edit-type" data-id="${primaryFolderId}">Edit</button>`;
+  } else {
+    typeDisplay = `<span style="color:#fbbf24; font-weight:700;">⚠ Applicant type needs checking</span> <button class="btn btn-warning btn-xs btn-open-edit-type" data-id="${primaryFolderId}">Choose Type</button>`;
+  }
   document.getElementById("drawer-applicant-type").innerHTML = typeDisplay;
+  document.getElementById("drawer-applicant-type").querySelector(".btn-open-edit-type")?.addEventListener("click", () => openChangeAppTypeModal(primaryFolderId));
+
   document.getElementById("drawer-comp-rate-badge").textContent = `${p.completeCount} of ${p.applicableRequirementsCount} requirements complete`;
 
   const driveLink = document.getElementById("drawer-drive-url");
@@ -1294,15 +1354,10 @@ function openDrawer(participantId) {
     const typeWidget = document.createElement("div");
     typeWidget.style.cssText = "margin-bottom:16px; background:#111827; padding:12px; border-radius:6px; border:1px solid #f59e0b;";
     typeWidget.innerHTML = `
-      <div style="color:#fbbf24; font-weight:700; font-size:0.85rem; margin-bottom:6px;">⚠ Please select enterprise applicant type:</div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-secondary btn-sm btn-select-drawer-type" data-type="INDIVIDUAL">[ Individual ]</button>
-        <button class="btn btn-secondary btn-sm btn-select-drawer-type" data-type="GROUP">[ Group ]</button>
-      </div>
+      <div style="color:#fbbf24; font-weight:700; font-size:0.85rem; margin-bottom:8px;">⚠ Applicant type needs checking before final compliance evaluation:</div>
+      <button class="btn btn-warning btn-sm btn-open-edit-type" data-id="${primaryFolderId}">Choose Applicant Type →</button>
     `;
-    typeWidget.querySelectorAll(".btn-select-drawer-type").forEach(btn => {
-      btn.addEventListener("click", () => setApplicantTypeOverride(primaryFolderId, btn.dataset.type));
-    });
+    typeWidget.querySelector(".btn-open-edit-type")?.addEventListener("click", () => openChangeAppTypeModal(primaryFolderId));
     reviewRequiredList.appendChild(typeWidget);
   }
 
@@ -2204,8 +2259,66 @@ function initEventListeners() {
       closeSummaryPreviewModal();
       closeRemoveEnterpriseModal();
       closeExcludedListModal();
+      closeChangeAppTypeModal();
     }
   });
+
+  // Change Applicant Type Modal Listeners
+  const btnCloseAppType = document.getElementById("btn-close-app-type-modal");
+  if (btnCloseAppType) btnCloseAppType.addEventListener("click", closeChangeAppTypeModal);
+
+  const btnCancelAppType1 = document.getElementById("btn-cancel-app-type-step1");
+  if (btnCancelAppType1) btnCancelAppType1.addEventListener("click", closeChangeAppTypeModal);
+
+  const appTypeOverlay = document.getElementById("modal-change-app-type-overlay");
+  if (appTypeOverlay) appTypeOverlay.addEventListener("click", (e) => {
+    if (e.target.id === "modal-change-app-type-overlay") closeChangeAppTypeModal();
+  });
+
+  document.querySelectorAll('input[name="modal-app-type-choice"]').forEach(r => {
+    r.addEventListener("change", () => {
+      const btnContinue = document.getElementById("btn-app-type-continue");
+      if (btnContinue) btnContinue.disabled = false;
+    });
+  });
+
+  const btnAppTypeContinue = document.getElementById("btn-app-type-continue");
+  if (btnAppTypeContinue) {
+    btnAppTypeContinue.addEventListener("click", () => {
+      const selected = document.querySelector('input[name="modal-app-type-choice"]:checked');
+      if (!selected) return;
+      const targetType = selected.value;
+      const p = state.participants.find(x => (x.enterpriseFolderId === state.editingTypeParticipantId || x.driveFolderId === state.editingTypeParticipantId || x.id === state.editingTypeParticipantId));
+      const oldType = p ? getApplicantTypeString(p.applicantType) : "CHECK";
+
+      state.editingTypeTargetValue = targetType;
+      document.getElementById("app-type-transition-from").textContent = oldType === "CHECK" ? "UNSPECIFIED" : oldType;
+      document.getElementById("app-type-transition-to").textContent = targetType;
+
+      document.getElementById("app-type-step-select").classList.add("hidden");
+      document.getElementById("app-type-step-confirm").classList.remove("hidden");
+    });
+  }
+
+  const btnAppTypeBack = document.getElementById("btn-app-type-back");
+  if (btnAppTypeBack) {
+    btnAppTypeBack.addEventListener("click", () => {
+      document.getElementById("app-type-step-confirm").classList.add("hidden");
+      document.getElementById("app-type-step-select").classList.remove("hidden");
+    });
+  }
+
+  const btnAppTypeConfirm = document.getElementById("btn-app-type-confirm");
+  if (btnAppTypeConfirm) {
+    btnAppTypeConfirm.addEventListener("click", async () => {
+      if (state.editingTypeParticipantId && state.editingTypeTargetValue) {
+        const targetId = state.editingTypeParticipantId;
+        const targetType = state.editingTypeTargetValue;
+        closeChangeAppTypeModal();
+        await setApplicantTypeOverride(targetId, targetType);
+      }
+    });
+  }
 
   // Remove Enterprise Drawer Action & Modal Listeners
   const btnRemoveDrawer = document.getElementById("btn-remove-enterprise-drawer");

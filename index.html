@@ -379,6 +379,89 @@
         </div>
       </div>
     </div>
+  <!-- Change Applicant Type Modal (2-Step Explicit Workflow) -->
+  <div class="modal-overlay hidden" id="modal-change-app-type-overlay">
+    <div class="modal" style="max-width:480px; width:92%;">
+      <!-- Header -->
+      <div class="modal-header" style="background:#1e1b4b; border-bottom:1px solid #4338ca;">
+        <div>
+          <h3 style="color:#a5b4fc; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color:#818cf8;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg>
+            Change Applicant Type
+          </h3>
+          <p class="subtitle" style="color:#c7d2fe; margin-top:2px; font-size:0.8rem;" id="app-type-modal-ent-subtitle">AgriTurkey</p>
+        </div>
+        <button class="btn-close" id="btn-close-app-type-modal" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Step 1: Selection View -->
+      <div class="modal-body" id="app-type-step-select" style="padding:20px;">
+        <div style="background:#111827; padding:12px 14px; border-radius:6px; border:1px solid #374151; margin-bottom:16px;">
+          <span style="font-size:0.75rem; color:#9ca3af; font-weight:700; text-transform:uppercase;">CURRENT CLASSIFICATION</span>
+          <div style="margin-top:4px; font-weight:700; font-size:0.9rem;" id="app-type-current-display">
+            Current: <span id="app-type-modal-current-badge" class="badge" style="background:#1e3a8a; color:#93c5fd;">GROUP</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="font-size:0.78rem; font-weight:700; color:#cbd5e1; display:block; margin-bottom:8px;">
+            SELECT NEW APPLICANT TYPE
+          </label>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <label style="display:flex; align-items:center; gap:10px; background:#1f2937; padding:12px 14px; border-radius:6px; border:1px solid #374151; cursor:pointer; font-size:0.875rem; color:#f8fafc;">
+              <input type="radio" name="modal-app-type-choice" value="INDIVIDUAL" style="accent-color:#6366f1; width:16px; height:16px;">
+              <div>
+                <strong>Individual</strong>
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:400; margin-top:2px;">Single applicant (Standard 11 requirements checklist)</div>
+              </div>
+            </label>
+            <label style="display:flex; align-items:center; gap:10px; background:#1f2937; padding:12px 14px; border-radius:6px; border:1px solid #374151; cursor:pointer; font-size:0.875rem; color:#f8fafc;">
+              <input type="radio" name="modal-app-type-choice" value="GROUP" style="accent-color:#6366f1; width:16px; height:16px;">
+              <div>
+                <strong>Group</strong>
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:400; margin-top:2px;">Team / Business entity (Includes Declaration of Intent & member IDs)</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div style="font-size:0.725rem; color:#94a3b8; background:#1e1b4b; padding:10px 12px; border-radius:6px; border:1px solid #4338ca; margin-bottom:16px; line-height:1.4;">
+          ℹ Changing applicant type will re-evaluate this enterprise using the new requirement set. Files in Google Drive remain untouched.
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-secondary" id="btn-cancel-app-type-step1">Cancel</button>
+          <button class="btn btn-primary" id="btn-app-type-continue" disabled>Continue →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Confirmation View -->
+      <div class="modal-body hidden" id="app-type-step-confirm" style="padding:20px;">
+        <div style="background:#7c2d12; border:1px solid #9a3412; padding:12px 14px; border-radius:6px; margin-bottom:16px; color:#ffedd5;">
+          <div style="font-weight:700; font-size:0.875rem; display:flex; align-items:center; gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Confirm Applicant Type Change?
+          </div>
+          <div style="font-size:0.8rem; margin-top:4px; opacity:0.9;">
+            This will change which requirements apply to this enterprise and immediately recalculate compliance.
+          </div>
+        </div>
+
+        <div style="background:#111827; padding:16px; border-radius:6px; border:1px solid #374151; margin-bottom:16px; text-align:center;">
+          <div style="font-size:0.75rem; color:#9ca3af; text-transform:uppercase; font-weight:700;">TRANSITION</div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:12px; margin-top:8px; font-size:1.1rem; font-weight:700;">
+            <span id="app-type-transition-from" style="color:#fbbf24;">GROUP</span>
+            <span style="color:#64748b;">→</span>
+            <span id="app-type-transition-to" style="color:#34d399;">INDIVIDUAL</span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-secondary" id="btn-app-type-back">← Back</button>
+          <button class="btn btn-warning" id="btn-app-type-confirm">Confirm Change</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Flag Document Issue Modal -->
